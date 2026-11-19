@@ -1,0 +1,5039 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>微生物防治大作戰</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/playcanvas/2.23.3/playcanvas.min.js"></script>
+  <style>
+    :root {
+      --bg-deep: #121530;
+      --bg-mid: #1d234a;
+      --glass: rgba(18, 22, 52, 0.78);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --accent: #ffd166;
+      --text-main: #ffffff;
+      --text-sub: #cfd6f2;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #2a3469 0%, #191f45 58%, #0f132c 100%);
+      font-family: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+      color: var(--text-main);
+      touch-action: none;
+    }
+
+    #game-shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #canvas-wrap {
+      position: relative;
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #application-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* Top HUD */
+    #hud-top {
+      position: absolute;
+      top: max(10px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(94%, 580px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+      z-index: 20;
+      pointer-events: auto;
+    }
+
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-sub);
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-value.accent {
+      color: var(--accent);
+    }
+
+    .progress-wrap {
+      flex: 1 1 90px;
+      max-width: 155px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-sub);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ffd166, #ff5d73, #38e499);
+      transition: width 0.25s ease-out;
+    }
+
+    .hud-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* Weapon Switch Floating Banner */
+    #weapon-toast {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: rgba(15, 19, 44, 0.9);
+      border: 1.5px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 22;
+      white-space: nowrap;
+    }
+
+    #weapon-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #weapon-toast .toast-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Floating combo / score popups */
+    #fx-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 15;
+    }
+
+    .float-text {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-weight: 900;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.72), 0 0 12px rgba(255, 255, 255, 0.3);
+      white-space: nowrap;
+      animation: floatUp 0.98s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translate(-50%, -30%) scale(0.62); }
+      20% { opacity: 1; transform: translate(-50%, -55%) scale(1.14); }
+      100% { opacity: 0; transform: translate(-50%, -145%) scale(0.95); }
+    }
+
+    /* Danger banner */
+    #danger-banner {
+      position: absolute;
+      top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: rgba(255, 59, 92, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255, 59, 92, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 18;
+    }
+
+    #danger-banner.active {
+      opacity: 1;
+      animation: pulseWarn 0.7s infinite alternate;
+    }
+
+    @keyframes pulseWarn {
+      from { transform: translateX(-50%) scale(0.97); }
+      to { transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* Bottom Weapon Selector Dock */
+    #color-dock {
+      position: relative;
+      flex: 0 0 auto;
+      width: 100%;
+      padding: 6px 10px calc(8px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(20, 25, 56, 0.92) 0%, rgba(12, 15, 36, 0.98) 100%);
+      border-top: 1px solid rgba(255, 255, 255, 0.16);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      z-index: 25;
+      touch-action: manipulation;
+    }
+
+    .dock-hint {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .dock-hint .swipe-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffd166;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    #ui-color-name {
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 12.5px;
+    }
+
+    #color-row {
+      width: min(100%, 480px);
+    }
+
+    #color-orbs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .weapon-row-grid {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .weapon-row-grid.row-4 .weapon-btn {
+      flex: 1 1 0;
+      max-width: 112px;
+    }
+
+    .weapon-row-grid.row-3 .weapon-btn {
+      flex: 1 1 0;
+      max-width: 122px;
+    }
+
+    .weapon-btn {
+      position: relative;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 5px 4px 4px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
+      color: #e6ebff;
+      cursor: pointer;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+    }
+
+    .weapon-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .weapon-btn:active {
+      transform: scale(0.95);
+    }
+
+    .weapon-btn.active {
+      transform: translateY(-2px);
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.24);
+      box-shadow: 0 0 15px var(--glow-color, rgba(255, 255, 255, 0.65));
+      z-index: 2;
+    }
+
+    .weapon-btn svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+      pointer-events: none;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    .weapon-btn .w-name {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      line-height: 1.1;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .weapon-btn .key-badge {
+      position: absolute;
+      top: 3px;
+      right: 4px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(12, 16, 38, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #d6dcff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    /* Overlay Modals */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 13, 34, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 40;
+      opacity: 1;
+      transition: opacity 0.22s ease;
+    }
+
+    .modal-backdrop.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal-card {
+      width: min(100%, 480px);
+      max-height: 92%;
+      overflow-y: auto;
+      background: linear-gradient(160deg, rgba(32, 40, 88, 0.96), rgba(18, 22, 54, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 18px 16px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    .title-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255, 209, 102, 0.16);
+      border: 1px solid rgba(255, 209, 102, 0.4);
+      color: #ffd166;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .modal-card h1, .modal-card h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      background: linear-gradient(90deg, #ffd166, #ff6b8b, #4ef2a8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal-sub {
+      margin: 0 0 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--text-sub);
+    }
+
+    .guide-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+      text-align: left;
+    }
+
+    .pathogen-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 6px 9px;
+    }
+
+    .pathogen-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(12, 16, 40, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pathogen-icon svg {
+      width: 30px;
+      height: 30px;
+      display: block;
+    }
+
+    .pathogen-info {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 11px;
+      line-height: 1.38;
+      color: #e9edff;
+    }
+
+    .pathogen-head {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 2px;
+    }
+
+    .pathogen-name {
+      font-size: 12.5px;
+      font-weight: 900;
+    }
+
+    .pathogen-look {
+      font-size: 10.5px;
+      color: #b9c3e8;
+    }
+
+    .drug-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .drug-tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      background: rgba(78, 242, 168, 0.16);
+      border: 1px solid rgba(78, 242, 168, 0.38);
+      color: #a9ffda;
+    }
+
+    .drug-tag.partial {
+      background: rgba(255, 183, 3, 0.15);
+      border-color: rgba(255, 183, 3, 0.48);
+      color: #ffe08a;
+    }
+
+    .controls-box {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 13px;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 11.5px;
+      color: #e9edff;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.35;
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 15px;
+      border: none;
+      background: linear-gradient(135deg, #ff5e84 0%, #ffb703 100%);
+      color: #16102e;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(255, 110, 140, 0.38);
+      transition: transform 0.14s ease, filter 0.14s ease;
+    }
+
+    .primary-btn:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    .primary-btn:active {
+      transform: scale(0.97);
+    }
+
+    .secondary-btn {
+      width: 100%;
+      margin-top: 9px;
+      padding: 10px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .score-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .summary-cell {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .summary-cell .s-lbl {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .summary-cell .s-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: #ffd166;
+      margin-top: 2px;
+    }
+
+    /* Right-side Vertical Antimicrobial Resistance (AMR) Pressure Gauge */
+    #amr-gauge {
+      position: absolute;
+      right: max(8px, env(safe-area-inset-right));
+      top: 52%;
+      transform: translateY(-50%);
+      width: 44px;
+      padding: 8px 6px;
+      background: rgba(16, 20, 48, 0.82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 21;
+      pointer-events: none;
+    }
+
+    #amr-gauge.danger-pulse {
+      border-color: rgba(255, 59, 92, 0.85);
+      box-shadow: 0 0 18px rgba(255, 59, 92, 0.55);
+      animation: amrPulse 0.65s infinite alternate;
+    }
+
+    @keyframes amrPulse {
+      from { transform: translateY(-50%) scale(1); }
+      to { transform: translateY(-50%) scale(1.04); }
+    }
+
+    .amr-title {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: var(--text-sub);
+      text-align: center;
+      line-height: 1.15;
+      letter-spacing: 0.02em;
+    }
+
+    .amr-track {
+      position: relative;
+      width: 16px;
+      height: clamp(120px, 32vh, 210px);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      overflow: hidden;
+    }
+
+    .amr-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 0%;
+      border-radius: 999px;
+      background: #2ee58d;
+      transition: height 0.18s ease-out, background-color 0.2s ease;
+    }
+
+    .amr-tick {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
+    }
+
+    .amr-value {
+      font-size: 13px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: #2ee58d;
+      line-height: 1;
+    }
+
+    .amr-max {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-sub);
+      line-height: 1;
+    }
+
+    /* AMR Lockout Alert Banner */
+    #amr-lockout-banner {
+      position: absolute;
+      top: calc(max(10px, env(safe-area-inset-top)) + 88px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(88%, 380px);
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(190, 20, 52, 0.94), rgba(120, 12, 38, 0.96));
+      border: 1.5px solid rgba(255, 190, 200, 0.55);
+      box-shadow: 0 10px 30px rgba(255, 30, 70, 0.48);
+      text-align: center;
+      z-index: 23;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    #amr-lockout-banner.active {
+      opacity: 1;
+      animation: pulseWarn 0.7s infinite alternate;
+    }
+
+    .amr-lockout-title {
+      font-size: 14px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.03em;
+    }
+
+    .amr-lockout-sub {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #ffe3a3;
+      margin-top: 3px;
+    }
+
+    .weapon-btn.locked {
+      opacity: 0.34 !important;
+      filter: grayscale(0.85);
+    }
+
+    .weapon-btn.locked::after {
+      content: "🔒";
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    /* Cinematic Opening Intro Overlay */
+    #intro-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 45;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      transition: opacity 0.35s ease;
+    }
+
+    #intro-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+    }
+
+    .intro-bar {
+      width: 100%;
+      height: 44px;
+      background: linear-gradient(180deg, rgba(6, 8, 22, 0.96), rgba(6, 8, 22, 0.72));
+      transition: transform 0.4s ease;
+    }
+
+    .intro-bar.bottom {
+      height: 54px;
+      background: linear-gradient(0deg, rgba(6, 8, 22, 0.96), rgba(6, 8, 22, 0.72));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    #intro-caption {
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #fff4cc;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      transition: opacity 0.25s ease;
+      padding-right: 12px;
+    }
+
+    #btn-skip-intro {
+      pointer-events: auto;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, transform 0.12s ease;
+    }
+
+    #btn-skip-intro:hover {
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    #btn-skip-intro:active {
+      transform: scale(0.95);
+    }
+
+    #intro-alert-banner {
+      position: absolute;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.85);
+      padding: 10px 22px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(205, 22, 56, 0.94), rgba(130, 12, 42, 0.96));
+      border: 1.5px solid rgba(255, 198, 206, 0.65);
+      box-shadow: 0 0 32px rgba(255, 40, 80, 0.55);
+      font-size: clamp(16px, 4.2vw, 22px);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      text-align: center;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #intro-alert-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    #intro-center-msg {
+      position: absolute;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.86);
+      padding: 11px 22px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(16, 42, 92, 0.9), rgba(14, 24, 62, 0.94));
+      border: 2px solid rgba(110, 224, 255, 0.72);
+      box-shadow: 0 0 36px rgba(72, 202, 255, 0.45), 0 12px 30px rgba(0, 0, 0, 0.55);
+      font-size: clamp(18px, 4.8vw, 26px);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: #ffffff;
+      text-align: center;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+      max-width: min(90%, 460px);
+      line-height: 1.35;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease;
+    }
+
+    #intro-center-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    #intro-center-msg.theme-bundle {
+      background: linear-gradient(135deg, rgba(32, 68, 56, 0.92), rgba(24, 22, 68, 0.94));
+      border-color: rgba(110, 248, 180, 0.78);
+      box-shadow: 0 0 38px rgba(78, 242, 168, 0.45), 0 12px 30px rgba(0, 0, 0, 0.55);
+    }
+
+    #intro-title-card {
+      text-align: center;
+      padding: 20px 26px;
+      border-radius: 26px;
+      background: radial-gradient(circle at 50% 40%, rgba(36, 46, 108, 0.88), rgba(14, 18, 46, 0.94));
+      border: 1.5px solid rgba(255, 214, 102, 0.55);
+      box-shadow: 0 0 50px rgba(255, 200, 70, 0.35), 0 18px 44px rgba(0, 0, 0, 0.65);
+      opacity: 0;
+      transform: scale(0.76);
+      transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.48s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: min(90%, 420px);
+    }
+
+    #intro-title-card.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #intro-title-card .it-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255, 209, 102, 0.18);
+      border: 1px solid rgba(255, 209, 102, 0.45);
+      color: #ffd166;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    #intro-title-card .it-main {
+      font-size: clamp(26px, 6.5vw, 36px);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      background: linear-gradient(90deg, #ffd166, #ff6b8b, #4ef2a8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0 0 6px;
+      line-height: 1.2;
+    }
+
+    #intro-title-card .it-sub {
+      font-size: 13px;
+      font-weight: 800;
+      color: #dbe4ff;
+      letter-spacing: 0.14em;
+    }
+
+    .replay-intro-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.06);
+      color: #d6dfff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .replay-intro-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .replay-intro-btn.hidden {
+      display: none;
+    }
+
+    /* Defender Picker Modal */
+    .defender-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0 14px;
+      text-align: left;
+    }
+
+    .defender-option {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 10px 11px;
+      border-radius: 15px;
+      border: 1.5px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .defender-option:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 209, 102, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .defender-option:active {
+      transform: scale(0.98);
+    }
+
+    .stat-value.gold {
+      color: #ffe066;
+    }
+
+    .picker-gold-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(255, 209, 102, 0.14);
+      border: 1px solid rgba(255, 209, 102, 0.42);
+      color: #ffe066;
+      font-size: 12.5px;
+      font-weight: 900;
+      margin-bottom: 4px;
+    }
+
+    .defender-cost {
+      margin-left: auto;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(255, 209, 102, 0.18);
+      border: 1px solid rgba(255, 209, 102, 0.45);
+      color: #ffe066;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .defender-option.unaffordable {
+      opacity: 0.48;
+      border-color: rgba(255, 92, 118, 0.3);
+    }
+
+    .defender-option.unaffordable .defender-cost {
+      background: rgba(255, 71, 102, 0.2);
+      border-color: rgba(255, 92, 118, 0.45);
+      color: #ff99aa;
+    }
+
+    #picker-warn {
+      min-height: 16px;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #ff7b8e;
+      margin-bottom: 4px;
+    }
+
+    .defender-option.locked-stage {
+      display: none;
+    }
+
+    .stage-subtitle {
+      margin: -2px 0 10px;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #ffd166;
+      letter-spacing: 0.03em;
+    }
+
+    .stage-story {
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border-radius: 13px;
+      background: rgba(255, 209, 102, 0.12);
+      border: 1px solid rgba(255, 209, 102, 0.36);
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #fff6d6;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .stage-meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .stage-pill {
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #dfe6ff;
+    }
+
+    .pathogen-count-badge {
+      margin-left: auto;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffd166;
+      font-size: 10.5px;
+      font-weight: 900;
+    }
+
+    .defender-option.current {
+      border-color: #4ef2a8;
+      background: rgba(78, 242, 168, 0.14);
+    }
+
+    .defender-icon {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      border-radius: 12px;
+      background: rgba(12, 16, 40, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .defender-icon svg {
+      width: 36px;
+      height: 36px;
+      display: block;
+    }
+
+    .defender-meta {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .defender-title {
+      font-size: 14px;
+      font-weight: 900;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .defender-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      color: #ffd166;
+    }
+
+    .defender-desc {
+      font-size: 11px;
+      line-height: 1.38;
+      color: var(--text-sub);
+    }
+
+    .danger-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 16px;
+      border-radius: 13px;
+      border: 1px solid rgba(255, 92, 118, 0.45);
+      background: rgba(255, 71, 102, 0.18);
+      color: #ffb3bf;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .danger-btn:hover {
+      background: rgba(255, 71, 102, 0.3);
+    }
+
+    .danger-btn.hidden {
+      display: none;
+    }
+
+    @media (max-width: 480px) {
+      #hud-top {
+        padding: 7px 10px;
+        gap: 6px;
+      }
+      .stat-value {
+        font-size: 14px;
+      }
+      .weapon-btn {
+        padding: 4px 2px 3px;
+      }
+      .weapon-btn svg {
+        width: 22px;
+        height: 22px;
+      }
+      .weapon-btn .w-name {
+        font-size: 10px;
+      }
+      .weapon-btn .key-badge {
+        display: none;
+      }
+      #amr-gauge {
+        width: 36px;
+        padding: 6px 4px;
+        right: 4px;
+      }
+      .amr-track {
+        width: 12px;
+      }
+      .guide-grid {
+        grid-template-columns: 1fr;
+      }
+      .guide-item.span-2 {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-shell">
+    <div id="canvas-wrap">
+      <canvas id="application-canvas"></canvas>
+
+      <!-- Top HUD -->
+      <div id="hud-top">
+        <div class="hud-group">
+          <div class="stat-pill">
+            <span class="stat-label">分數</span>
+            <span class="stat-value accent" id="ui-score">0</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">金錢</span>
+            <span class="stat-value gold" id="ui-gold">50</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">關卡</span>
+            <span class="stat-value" id="ui-stage">1</span>
+          </div>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-header">
+            <span>清除進度</span>
+            <span id="ui-progress-text">0 / 26</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="ui-progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="hud-actions">
+          <button class="icon-btn" id="btn-mute" title="音效開關" aria-label="音效開關">🔊</button>
+          <button class="icon-btn" id="btn-pause" title="暫停" aria-label="暫停">⏸</button>
+        </div>
+      </div>
+
+      <div id="danger-banner">⚠️ 病原體快抵達終點了！</div>
+      <div id="amr-lockout-banner">
+        <div class="amr-lockout-title">⚠️ 抗生素使用過度，抗藥性失控</div>
+        <div class="amr-lockout-sub" id="amr-lockout-timer">20.0 秒無法使用抗生素（仍可使用 Tamiflu）</div>
+      </div>
+
+      <!-- Vertical AMR Pressure Gauge -->
+      <div id="amr-gauge" aria-label="抗藥性壓力量表">
+        <div class="amr-title">抗藥<br/>壓力</div>
+        <div class="amr-track">
+          <div class="amr-fill" id="amr-bar-fill"></div>
+          <div class="amr-tick" style="bottom: 50%;" title="10"></div>
+          <div class="amr-tick" style="bottom: 75%;" title="15"></div>
+        </div>
+        <div class="amr-value" id="amr-val-text">0</div>
+        <div class="amr-max">/20</div>
+      </div>
+      <div id="weapon-toast"><span class="toast-dot" id="weapon-toast-dot"></span><span id="weapon-toast-text">Tamiflu</span></div>
+      <div id="fx-layer"></div>
+
+      <!-- Opening Cinematic Overlay -->
+      <div id="intro-overlay" class="hidden">
+        <div class="intro-bar top"></div>
+        <div id="intro-alert-banner">⚠️ 抗生素使用過量，抗藥性失控</div>
+        <div id="intro-center-msg"></div>
+        <div id="intro-title-card">
+          <div class="it-badge">PLAYCANVAS 3D • 感染管制教育遊戲</div>
+          <div class="it-main">微生物防治大作戰</div>
+          <div class="it-sub">精準用藥 × 感染管制</div>
+        </div>
+        <div class="intro-bar bottom">
+          <div id="intro-caption">微觀戰場・病原體沿之字軌道入侵！</div>
+          <button type="button" id="btn-skip-intro">跳過動畫 ⏭</button>
+        </div>
+      </div>
+
+      <!-- Start / Stage Briefing Modal -->
+      <div class="modal-backdrop" id="modal-start">
+        <div class="modal-card">
+          <div class="title-badge" id="stage-brief-badge">STAGE 1 • 第一關</div>
+          <h1>微生物防治大作戰</h1>
+          <div class="stage-subtitle" id="stage-brief-title">第 1 關：基礎防線</div>
+          <div class="stage-story" id="stage-brief-story"></div>
+          <div class="stage-meta-pills" id="stage-brief-pills"></div>
+          <div class="guide-grid" id="stage-brief-pathogens"></div>
+          <div class="controls-box">
+            <div class="control-item">
+              <span>🖱️📱</span>
+              <div><strong>操作：</strong>點擊下方並排武器直接換藥（電腦支援數字鍵），點擊目標射出；點擊地圖圓圈部署防禦角色。</div>
+            </div>
+            <div class="control-item">
+              <span>🪙</span>
+              <div><strong>經濟：</strong>每關起始 50 金，每消滅 1 隻病原體 +1 分、+1 金；防禦角色首隻皆 20 金（同種重複購買 +10 金）。</div>
+            </div>
+          </div>
+          <button class="primary-btn" id="btn-start">開始遊戲</button>
+          <button type="button" class="replay-intro-btn" id="btn-replay-intro">🎬 重播開場動畫</button>
+        </div>
+      </div>
+
+      <!-- Defender Picker Modal -->
+      <div class="modal-backdrop hidden" id="modal-defender">
+        <div class="modal-card">
+          <div class="title-badge" id="defender-slot-badge">防禦陣地</div>
+          <h2>選擇防禦角色</h2>
+          <div class="picker-gold-bar">🪙 目前金錢：<span id="picker-gold-val">50</span> 金</div>
+          <div id="picker-warn"></div>
+          <div class="defender-list">
+            <button type="button" class="defender-option" id="btn-deploy-handwash" data-defender="handwash">
+              <div class="defender-icon">
+                <svg viewBox="0 0 36 36">
+                  <path d="M10 13 C10 7 26 7 26 13 Z" fill="#e63946" stroke="#ffd166" stroke-width="1.3"/>
+                  <rect x="8" y="12.5" width="20" height="2.6" rx="1.3" fill="#ffd166"/>
+                  <circle cx="18" cy="18" r="4.5" fill="#ffd9b3"/>
+                  <rect x="11.5" y="22.5" width="13" height="10" rx="3" fill="#e63946"/>
+                  <rect x="14" y="24" width="8" height="2" fill="#ffd166"/>
+                  <path d="M24 26 L32 23" stroke="#5ec8ff" stroke-width="2.5" stroke-linecap="round"/>
+                  <circle cx="33" cy="22.5" r="2" fill="#9ce3ff"/>
+                </svg>
+              </div>
+              <div class="defender-meta">
+                <div class="defender-title" style="color:#ff7b89;">洗手 <span class="defender-badge">每 4 秒</span><span class="defender-cost" id="cost-handwash">🪙 20 金</span></div>
+                <div class="defender-desc">紅衣消防員持水管隨機沖水消滅射程 4 格內 1 隻病原體。</div>
+              </div>
+            </button>
+
+            <button type="button" class="defender-option" id="btn-deploy-isolation" data-defender="isolation">
+              <div class="defender-icon">
+                <svg viewBox="0 0 36 36">
+                  <circle cx="18" cy="12" r="4.8" fill="#ffd9b3"/>
+                  <path d="M13.5 10 C15 6.5 22 6.5 22.8 10.5 Z" fill="#23283d"/>
+                  <path d="M11 29 L13 18 H23 L25 29 Z" fill="#181c2e" stroke="#6f7aa6" stroke-width="1"/>
+                  <polygon points="16,18 20,18 18,24" fill="#ffffff"/>
+                  <path d="M16.5 18.8 L19.5 18.8" stroke="#ff4d6d" stroke-width="1.8"/>
+                  <line x1="23" y1="22" x2="32" y2="11" stroke="#fff7d6" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="32.5" cy="10.5" r="1.8" fill="#ffd166"/>
+                </svg>
+              </div>
+              <div class="defender-meta">
+                <div class="defender-title" style="color:#9ad8ff;">接觸隔離 <span class="defender-badge">攔截 CRE</span><span class="defender-cost" id="cost-isolation">🪙 20 金</span></div>
+                <div class="defender-desc">指揮家攔下路過的 CRE，集滿 3 顆或無其他病原體時一起放出。</div>
+              </div>
+            </button>
+
+            <button type="button" class="defender-option" id="btn-deploy-bundle" data-defender="bundle">
+              <div class="defender-icon">
+                <svg viewBox="0 0 36 36">
+                  <polygon points="18,3 11,13 25,13" fill="#7c3aed" stroke="#e9d5ff" stroke-width="1"/>
+                  <ellipse cx="18" cy="13" rx="9" ry="2.2" fill="#6d28d9"/>
+                  <circle cx="18" cy="17.5" r="4.2" fill="#ffe0c2"/>
+                  <path d="M12 31 L14.5 21.5 H21.5 L24 31 Z" fill="#9333ea"/>
+                  <line x1="25.5" y1="30" x2="29" y2="10" stroke="#c08457" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="29.3" cy="9.2" r="3" fill="#ff9f1c" stroke="#fff3b0" stroke-width="1.1"/>
+                </svg>
+              </div>
+              <div class="defender-meta">
+                <div class="defender-title" style="color:#d8b4fe;">組合式照護 <span class="defender-badge">每 6 秒</span><span class="defender-cost" id="cost-bundle">🪙 20 金</span></div>
+                <div class="defender-desc">女魔法師發射火球，優先清除落單 CRE→ESBL→MRSA→綠膿→葡萄→大腸→非落單細菌。</div>
+              </div>
+            </button>
+          </div>
+          <button type="button" class="danger-btn hidden" id="btn-remove-defender">撤離此格防禦角色</button>
+          <button type="button" class="secondary-btn" id="btn-cancel-defender">取消</button>
+        </div>
+      </div>
+
+      <!-- Pause Modal -->
+      <div class="modal-backdrop hidden" id="modal-pause">
+        <div class="modal-card">
+          <div class="title-badge">PAUSED</div>
+          <h2>遊戲暫停</h2>
+          <p class="modal-sub">確認好抗藥菌盾牌與對應抗菌光譜，隨時繼續作戰！</p>
+          <button class="primary-btn" id="btn-resume">繼續遊戲</button>
+          <button class="secondary-btn" id="btn-restart-pause">重新開始</button>
+        </div>
+      </div>
+
+      <!-- Stage Clear / Game Over Modal -->
+      <div class="modal-backdrop hidden" id="modal-end">
+        <div class="modal-card">
+          <div class="title-badge" id="end-badge">STAGE CLEAR</div>
+          <h2 id="end-title">感染控制成功！</h2>
+          <p class="modal-sub" id="end-sub">所有病原體皆已清除完畢。</p>
+          <div class="score-summary">
+            <div class="summary-cell">
+              <div class="s-lbl">目前分數</div>
+              <div class="s-val" id="end-score">0</div>
+            </div>
+            <div class="summary-cell">
+              <div class="s-lbl">最高紀錄</div>
+              <div class="s-val" id="end-best">0</div>
+            </div>
+          </div>
+          <button class="primary-btn" id="btn-end-primary">下一關</button>
+          <button class="secondary-btn" id="btn-end-restart">重新挑戰第 1 關</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Weapon Selector Dock -->
+    <div id="color-dock" aria-label="切換抗微生物武器">
+      <div class="dock-hint">
+        <span class="swipe-pill">點擊直接切換武器</span>
+        <span id="ui-color-name">目前武器：Tamiflu</span>
+      </div>
+      <div id="color-row">
+        <div id="color-orbs"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ============================================================
+         1. PATHOGENS (7) & ANTIMICROBIAL WEAPONS (7)
+      ============================================================ */
+      const PATHOGENS = [
+        {
+          id: 0, key: 'influenza', name: '流感病毒', hex: '#ffd23f',
+          look: '黃色球形＋許多延伸受器',
+          drugs: [{ name: 'Tamiflu', partial: false }],
+          svg: '<svg viewBox="0 0 36 36"><g stroke="#ff9f1c" stroke-width="2" stroke-linecap="round"><line x1="18" y1="3" x2="18" y2="9"/><line x1="18" y1="27" x2="18" y2="33"/><line x1="3" y1="18" x2="9" y2="18"/><line x1="27" y1="18" x2="33" y2="18"/><line x1="7" y1="7" x2="12" y2="12"/><line x1="24" y1="24" x2="29" y2="29"/><line x1="29" y1="7" x2="24" y2="12"/><line x1="12" y1="24" x2="7" y2="29"/></g><circle cx="18" cy="18" r="8.5" fill="#ffd23f" stroke="#fff3b0" stroke-width="1.2"/><circle cx="18" cy="3.5" r="2" fill="#ffd23f"/><circle cx="18" cy="32.5" r="2" fill="#ffd23f"/><circle cx="3.5" cy="18" r="2" fill="#ffd23f"/><circle cx="32.5" cy="18" r="2" fill="#ffd23f"/></svg>'
+        },
+        {
+          id: 1, key: 'staph', name: '葡萄球菌', hex: '#cfd8ff',
+          look: '黑色小圓球聚集成團',
+          drugs: [
+            { name: 'Oxacillin', partial: false },
+            { name: 'Vancomycin', partial: false },
+            { name: 'Cefazolin（部分・單顆）', partial: true },
+            { name: 'Ertapenem（部分・單顆）', partial: true }
+          ],
+          svg: '<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="13" fill="#9fb0e0" opacity="0.22"/><g fill="#191d2b" stroke="#6d7899" stroke-width="0.8"><circle cx="14" cy="13" r="4.5"/><circle cx="22" cy="13" r="4.5"/><circle cx="11" cy="19" r="4.5"/><circle cx="18" cy="18" r="4.8"/><circle cx="25" cy="19" r="4.5"/><circle cx="15" cy="24" r="4.5"/><circle cx="22" cy="24" r="4.5"/></g></svg>'
+        },
+        {
+          id: 2, key: 'ecoli', name: '大腸桿菌', hex: '#ff6b81',
+          look: '紅色臘腸形狀',
+          drugs: [
+            { name: 'Cefazolin', partial: false },
+            { name: 'Ciprofloxacin', partial: false },
+            { name: 'Ertapenem', partial: false },
+            { name: 'Zavicefta', partial: false }
+          ],
+          svg: '<svg viewBox="0 0 36 36"><g transform="rotate(-32 18 18)"><rect x="6" y="12" width="24" height="12" rx="6" fill="#ff4763" stroke="#ff9eab" stroke-width="1.2"/><rect x="10" y="14.2" width="11" height="2.6" rx="1.3" fill="#ffd6dd" opacity="0.75"/></g></svg>'
+        },
+        {
+          id: 3, key: 'pseudo', name: '綠膿桿菌', hex: '#45ee9c',
+          look: '綠色長條桿狀',
+          drugs: [
+            { name: 'Ciprofloxacin', partial: false },
+            { name: 'Zavicefta', partial: false }
+          ],
+          svg: '<svg viewBox="0 0 36 36"><g transform="rotate(36 18 18)"><rect x="7" y="14.2" width="21" height="7.6" rx="3.8" fill="#25d97a" stroke="#9effca" stroke-width="1.1"/><path d="M28 18 Q31 15 34 18" fill="none" stroke="#85ffc0" stroke-width="1.6" stroke-linecap="round"/></g></svg>'
+        },
+        {
+          id: 4, key: 'mrsa', name: 'MRSA', hex: '#ffd24c',
+          look: '葡萄球菌外型＋大型金色盾牌',
+          drugs: [{ name: 'Vancomycin', partial: false }],
+          svg: '<svg viewBox="0 0 36 36"><g fill="#191d2b" stroke="#6d7899" stroke-width="0.8"><circle cx="12" cy="13" r="4.4"/><circle cx="24" cy="13" r="4.4"/><circle cx="11" cy="21" r="4.4"/><circle cx="25" cy="21" r="4.4"/><circle cx="18" cy="11" r="4.4"/></g><path d="M10 11 H26 V20 C26 26 18 30 18 30 C18 30 10 26 10 20 Z" fill="#ffbe2e" stroke="#fff0a6" stroke-width="1.5"/><path d="M18 13 V27 M13 18 H23" stroke="#fff6cc" stroke-width="1.4" stroke-linecap="round"/></svg>'
+        },
+        {
+          id: 5, key: 'esbl', name: 'ESBL', hex: '#e3ecff',
+          look: '大腸桿菌外型＋大型銀色盾牌',
+          drugs: [
+            { name: 'Ertapenem', partial: false },
+            { name: 'Zavicefta', partial: false }
+          ],
+          svg: '<svg viewBox="0 0 36 36"><g transform="rotate(-32 18 18)"><rect x="5" y="12" width="26" height="12" rx="6" fill="#ff4763"/></g><path d="M10 11 H26 V20 C26 26 18 30 18 30 C18 30 10 26 10 20 Z" fill="#cfd9f0" stroke="#ffffff" stroke-width="1.5"/><path d="M18 13 V27 M13 18 H23" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/></svg>'
+        },
+        {
+          id: 6, key: 'cre', name: 'CRE', hex: '#ffd84d',
+          look: '大腸桿菌外型＋金色光芒＋大型金色盾牌',
+          drugs: [{ name: 'Zavicefta', partial: false }],
+          svg: '<svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="#ffd23f" opacity="0.32"/><g transform="rotate(-32 18 18)"><rect x="5" y="12" width="26" height="12" rx="6" fill="#ff4763"/></g><path d="M10 11 H26 V20 C26 26 18 30 18 30 C18 30 10 26 10 20 Z" fill="#ffbe2e" stroke="#fff6b8" stroke-width="1.6"/><path d="M18 13 V27 M13 18 H23" stroke="#fffbe0" stroke-width="1.4" stroke-linecap="round"/></svg>'
+        }
+      ];
+
+      const WEAPONS = [
+        {
+          id: 0,
+          name: 'Tamiflu',
+          desc: '黃白色膠囊',
+          isAntibiotic: false,
+          amrCost: 0,
+          hex: '#ffd23f',
+          glow: 'rgba(255, 210, 63, 0.8)',
+          aimRgb: [1.0, 0.84, 0.26],
+          svg: '<svg viewBox="0 0 40 40"><g transform="rotate(-35 20 20)"><rect x="12" y="5" width="16" height="15" rx="8" fill="#ffd23f" stroke="#fff7cc" stroke-width="1.4"/><rect x="12" y="19" width="16" height="16" rx="8" fill="#f7f9ff" stroke="#d9e2ff" stroke-width="1.4"/><line x1="12" y1="20" x2="28" y2="20" stroke="#998233" stroke-width="1.4"/><ellipse cx="16.5" cy="12" rx="2" ry="4" fill="#ffffff" opacity="0.6"/></g></svg>'
+        },
+        {
+          id: 1,
+          name: 'Cefazolin',
+          desc: '紅標玻璃瓶',
+          isAntibiotic: true,
+          amrCost: 1,
+          hex: '#ff5268',
+          glow: 'rgba(255, 82, 104, 0.82)',
+          aimRgb: [1.0, 0.34, 0.42],
+          svg: '<svg viewBox="0 0 40 40"><rect x="15" y="4" width="10" height="4" rx="1.5" fill="#d8e1f0"/><rect x="16.5" y="8" width="7" height="4" fill="#c7e8ff" opacity="0.85"/><rect x="11" y="12" width="18" height="23" rx="4" fill="#d6f0ff" fill-opacity="0.72" stroke="#ffffff" stroke-width="1.5"/><rect x="11.8" y="18" width="16.4" height="11" rx="1.2" fill="#e63946"/><line x1="14.5" y1="21.8" x2="25.5" y2="21.8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/><line x1="14.5" y1="25.2" x2="22" y2="25.2" stroke="#ffd6da" stroke-width="1.3" stroke-linecap="round"/></svg>'
+        },
+        {
+          id: 2,
+          name: 'Oxacillin',
+          desc: '黑標玻璃瓶',
+          isAntibiotic: true,
+          amrCost: 1,
+          hex: '#b8c2e0',
+          glow: 'rgba(184, 194, 224, 0.78)',
+          aimRgb: [0.75, 0.8, 0.94],
+          svg: '<svg viewBox="0 0 40 40"><rect x="15" y="4" width="10" height="4" rx="1.5" fill="#d8e1f0"/><rect x="16.5" y="8" width="7" height="4" fill="#c7e8ff" opacity="0.85"/><rect x="11" y="12" width="18" height="23" rx="4" fill="#d6f0ff" fill-opacity="0.72" stroke="#ffffff" stroke-width="1.5"/><rect x="11.8" y="18" width="16.4" height="11" rx="1.2" fill="#181b26" stroke="#646d8c" stroke-width="0.9"/><line x1="14.5" y1="21.8" x2="25.5" y2="21.8" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/><line x1="14.5" y1="25.2" x2="22" y2="25.2" stroke="#a5b0d6" stroke-width="1.3" stroke-linecap="round"/></svg>'
+        },
+        {
+          id: 3,
+          name: 'Ciprofloxacin',
+          desc: '綠色玻璃瓶',
+          isAntibiotic: true,
+          amrCost: 5,
+          hex: '#2fe388',
+          glow: 'rgba(47, 227, 136, 0.82)',
+          aimRgb: [0.22, 0.92, 0.56],
+          svg: '<svg viewBox="0 0 40 40"><rect x="15" y="4" width="10" height="4" rx="1.5" fill="#e6edf5"/><rect x="16.5" y="8" width="7" height="4" fill="#4de89a"/><rect x="11" y="12" width="18" height="23" rx="4" fill="#1db968" fill-opacity="0.88" stroke="#9effca" stroke-width="1.5"/><ellipse cx="15.5" cy="21" rx="2" ry="6.5" fill="#c2ffe0" opacity="0.55"/></svg>'
+        },
+        {
+          id: 4,
+          name: 'Vancomycin',
+          desc: '黑標金框玻璃瓶',
+          isAntibiotic: true,
+          amrCost: 5,
+          hex: '#ffd24c',
+          glow: 'rgba(255, 210, 76, 0.84)',
+          aimRgb: [0.95, 0.82, 0.36],
+          svg: '<svg viewBox="0 0 40 40"><rect x="15" y="4" width="10" height="4" rx="1.5" fill="#ffd24c"/><rect x="16.5" y="8" width="7" height="4" fill="#c7e8ff" opacity="0.85"/><rect x="11" y="12" width="18" height="23" rx="4" fill="#d6f0ff" fill-opacity="0.72" stroke="#ffe599" stroke-width="1.5"/><rect x="11.6" y="17.5" width="16.8" height="12" rx="1.4" fill="#151824" stroke="#ffcb38" stroke-width="2.1"/><line x1="15" y1="21.8" x2="25" y2="21.8" stroke="#ffe599" stroke-width="1.4" stroke-linecap="round"/><line x1="15" y1="25.2" x2="22" y2="25.2" stroke="#ffd24c" stroke-width="1.2" stroke-linecap="round"/></svg>'
+        },
+        {
+          id: 5,
+          name: 'Ertapenem',
+          desc: '紅標金框玻璃瓶',
+          isAntibiotic: true,
+          amrCost: 5,
+          hex: '#ff7b7b',
+          glow: 'rgba(255, 130, 102, 0.86)',
+          aimRgb: [1.0, 0.52, 0.38],
+          svg: '<svg viewBox="0 0 40 40"><rect x="15" y="4" width="10" height="4" rx="1.5" fill="#ffd24c"/><rect x="16.5" y="8" width="7" height="4" fill="#c7e8ff" opacity="0.85"/><rect x="11" y="12" width="18" height="23" rx="4" fill="#d6f0ff" fill-opacity="0.72" stroke="#ffe599" stroke-width="1.5"/><rect x="11.6" y="17.5" width="16.8" height="12" rx="1.4" fill="#e02f44" stroke="#ffcb38" stroke-width="2.1"/><line x1="15" y1="21.8" x2="25" y2="21.8" stroke="#fff6d6" stroke-width="1.4" stroke-linecap="round"/><line x1="15" y1="25.2" x2="22" y2="25.2" stroke="#ffd24c" stroke-width="1.2" stroke-linecap="round"/></svg>'
+        },
+        {
+          id: 6,
+          name: 'Zavicefta',
+          desc: '金色玻璃瓶',
+          isAntibiotic: true,
+          amrCost: 10,
+          hex: '#ffbe2e',
+          glow: 'rgba(255, 200, 56, 0.92)',
+          aimRgb: [1.0, 0.8, 0.16],
+          svg: '<svg viewBox="0 0 40 40"><rect x="15" y="4" width="10" height="4" rx="1.5" fill="#fff0b3"/><rect x="16.5" y="8" width="7" height="4" fill="#ffcf40"/><rect x="11" y="12" width="18" height="23" rx="4" fill="#f2a900" fill-opacity="0.92" stroke="#fff2b2" stroke-width="1.6"/><ellipse cx="15.5" cy="21" rx="2.1" ry="6.8" fill="#fff7cc" opacity="0.7"/><circle cx="24" cy="18" r="1.4" fill="#ffffff" opacity="0.85"/></svg>'
+        }
+      ];
+
+      /**
+       * Exact antimicrobial spectrum rules:
+       * - 'cluster': kills hit pathogen + contiguous connected pathogens of the SAME pathogenId ONLY
+       * - 'single': kills ONLY the single hit pathogen
+       * - 'none': ineffective
+       */
+      function getAttackEffect(weaponId, pathogenId) {
+        if (weaponId === 0) {
+          return pathogenId === 0 ? 'cluster' : 'none'; // Tamiflu -> Influenza
+        }
+        if (weaponId === 1) {
+          if (pathogenId === 2) return 'cluster'; // Cefazolin -> E. coli
+          if (pathogenId === 1) return 'single';  // Cefazolin -> Staph (single only)
+          return 'none';
+        }
+        if (weaponId === 2) {
+          return pathogenId === 1 ? 'cluster' : 'none'; // Oxacillin -> Staph
+        }
+        if (weaponId === 3) {
+          return (pathogenId === 3 || pathogenId === 2) ? 'cluster' : 'none'; // Ciprofloxacin -> Pseudomonas or E. coli (same species only)
+        }
+        if (weaponId === 4) {
+          return (pathogenId === 1 || pathogenId === 4) ? 'cluster' : 'none'; // Vancomycin -> Staph or MRSA (same species only)
+        }
+        if (weaponId === 5) {
+          if (pathogenId === 2 || pathogenId === 5) return 'cluster'; // Ertapenem -> E. coli or ESBL (same species only)
+          if (pathogenId === 1) return 'single';                      // Ertapenem -> Staph (single only)
+          return 'none';
+        }
+        if (weaponId === 6) {
+          return (pathogenId === 2 || pathogenId === 3 || pathogenId === 5 || pathogenId === 6) ? 'cluster' : 'none'; // Zavicefta -> E. coli, Pseudomonas, ESBL, or CRE (same species only)
+        }
+        return 'none';
+      }
+
+      // Stage 1-4 fixed campaign configs + Stage 5+ escalating endless progression
+      const STAGE_4_BASE_COUNTS = { 2: 15, 1: 15, 5: 20, 0: 10, 3: 20, 4: 15, 6: 3 };
+      let endlessStageCounts = null;
+
+      function getStageConfig(stage) {
+        if (stage === 1) {
+          return {
+            title: '第 1 關：基礎防線',
+            story: '使用Tamiflu對抗病毒，cefazolin 對抗大腸桿菌，oxacillin對抗葡萄球菌，除使用抗生素之外，可以在圓圈推廣洗手，消滅細菌',
+            counts: { 2: 20, 1: 20, 0: 10 },
+            weapons: [0, 1, 2],
+            defenders: ['handwash'],
+            spawnInterval: 1.0
+          };
+        }
+        if (stage === 2) {
+          return {
+            title: '第 2 關：抗藥菌現身',
+            story: '使用Ciprofloxacin 對抗綠膿桿菌，Vancomycin 對抗MRSA，可以在圓圈推廣洗手跟組合式照顧，減少感染，要注意濫用抗生素會產生抗藥性危機',
+            counts: { 2: 20, 1: 20, 0: 10, 3: 20, 4: 10 },
+            weapons: [0, 1, 2, 3, 4],
+            defenders: ['handwash', 'bundle'],
+            spawnInterval: 1.0
+          };
+        }
+        if (stage === 3) {
+          return {
+            title: '第 3 關：ESBL 挑戰',
+            story: '使用Ertapenem 對抗ESBL，要注意濫用抗生素會產生抗藥性危機',
+            counts: { 2: 20, 1: 20, 5: 15, 0: 15, 3: 20, 4: 15 },
+            weapons: [0, 1, 2, 3, 4, 5],
+            defenders: ['handwash', 'bundle'],
+            spawnInterval: 1.0
+          };
+        }
+        if (stage === 4) {
+          endlessStageCounts = Object.assign({}, STAGE_4_BASE_COUNTS);
+          return {
+            title: '第 4 關：CRE 危機',
+            story: '使用Zavicefta 對抗CRE，使用「接觸隔離」，阻止CRE的進攻吧，要注意濫用抗生素會產生抗藥性危機',
+            counts: Object.assign({}, STAGE_4_BASE_COUNTS),
+            weapons: [0, 1, 2, 3, 4, 5, 6],
+            defenders: ['handwash', 'bundle', 'isolation'],
+            spawnInterval: 1.0
+          };
+        }
+
+        // Stage 5+: each pathogen increases randomly by 1-3 per stage; interval drops 0.05s down to 0.5s
+        if (!endlessStageCounts) {
+          endlessStageCounts = Object.assign({}, STAGE_4_BASE_COUNTS);
+        }
+        const nextCounts = {};
+        for (let id = 0; id < 7; id++) {
+          const prev = endlessStageCounts[id] || 0;
+          nextCounts[id] = prev + (1 + Math.floor(Math.random() * 3));
+        }
+        endlessStageCounts = nextCounts;
+        const interval = Math.max(0.5, Math.round((1.0 - (stage - 4) * 0.05) * 100) / 100);
+        return {
+          title: '第 ' + stage + ' 關：高壓感染管制',
+          story: '全病原菌群數量增加且推進加速（每 ' + interval.toFixed(2) + ' 秒 1 隻）！善用洗手、組合式照護、接觸隔離並嚴控抗藥壓力！',
+          counts: Object.assign({}, nextCounts),
+          weapons: [0, 1, 2, 3, 4, 5, 6],
+          defenders: ['handwash', 'bundle', 'isolation'],
+          spawnInterval: interval
+        };
+      }
+
+      /* ============================================================
+         2. WEB AUDIO SYNTHESIZER
+      ============================================================ */
+      const SoundFX = {
+        ctx: null,
+        masterGain: null,
+        bgmGain: null,
+        sfxGain: null,
+        muted: false,
+        bgmMode: 'none', // 'none' | 'intro' | 'battle' | 'crisis'
+        bgmTimer: null,
+        bgmStep: 0,
+        ensure() {
+          if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            this.ctx = new AC();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = this.muted ? 0 : 1;
+            this.masterGain.connect(this.ctx.destination);
+
+            this.bgmGain = this.ctx.createGain();
+            this.bgmGain.gain.value = 0.22;
+            this.bgmGain.connect(this.masterGain);
+
+            this.sfxGain = this.ctx.createGain();
+            this.sfxGain.gain.value = 0.85;
+            this.sfxGain.connect(this.masterGain);
+          }
+          if (this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+          return this.muted ? null : this.ctx;
+        },
+        setMuted(isMuted) {
+          this.muted = isMuted;
+          if (this.masterGain && this.ctx) {
+            this.masterGain.gain.setTargetAtTime(isMuted ? 0 : 1, this.ctx.currentTime, 0.03);
+          }
+        },
+        setBgmDuck(ducked) {
+          if (this.bgmGain && this.ctx) {
+            this.bgmGain.gain.setTargetAtTime(ducked ? 0.08 : 0.22, this.ctx.currentTime, 0.08);
+          }
+        },
+        startBgm(mode) {
+          if (this.bgmMode === mode && this.bgmTimer) return;
+          this.stopBgm();
+          this.bgmMode = mode;
+          this.bgmStep = 0;
+          if (mode === 'none') return;
+          const stepMs = mode === 'crisis' ? 165 : (mode === 'intro' ? 195 : 210);
+          this.bgmTimer = setInterval(() => this._tickBgm(), stepMs);
+        },
+        stopBgm() {
+          if (this.bgmTimer) {
+            clearInterval(this.bgmTimer);
+            this.bgmTimer = null;
+          }
+          this.bgmMode = 'none';
+        },
+        _playBgmNote(freq, dur, type, vol, target) {
+          if (!this.ctx || this.ctx.state !== 'running' || this.muted) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = type || 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.linearRampToValueAtTime(vol, now + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+          osc.connect(g).connect(target || this.bgmGain);
+          osc.start(now);
+          osc.stop(now + dur + 0.02);
+        },
+        _tickBgm() {
+          if (!this.ctx || this.ctx.state !== 'running' || this.muted) return;
+          const step = this.bgmStep++;
+
+          if (this.bgmMode === 'intro') {
+            // Dynamic 3-act intro soundtrack synced to introState.act
+            const act = (typeof introState !== 'undefined' && introState.act) ? introState.act : 1;
+            if (act === 2) {
+              // Tense minor MDR alarm ostinato
+              const bass = [130.81, 130.81, 155.56, 123.47][step % 4];
+              const lead = [523.25, 0, 622.25, 587.33, 523.25, 0, 493.88, 466.16][step % 8];
+              this._playBgmNote(bass, 0.16, 'sawtooth', 0.18);
+              if (lead) this._playBgmNote(lead, 0.14, 'square', 0.11);
+            } else if (act >= 3) {
+              // Heroic comeback fanfare
+              const bass = [174.61, 196.0, 220.0, 261.63][Math.floor(step / 4) % 4];
+              const mel = [523.25, 659.25, 783.99, 1046.5, 880.0, 783.99, 659.25, 783.99][step % 8];
+              if (step % 2 === 0) this._playBgmNote(bass, 0.28, 'triangle', 0.26);
+              this._playBgmNote(mel, 0.17, 'triangle', 0.2);
+            } else {
+              // Act 1 upbeat clinic march
+              const bass = [130.81, 196.0, 146.83, 196.0][step % 4];
+              const mel = [523.25, 587.33, 659.25, 523.25, 783.99, 659.25, 587.33, 0][step % 8];
+              this._playBgmNote(bass, 0.17, 'triangle', 0.22);
+              if (mel) this._playBgmNote(mel, 0.15, 'sine', 0.2);
+            }
+            return;
+          }
+
+          if (this.bgmMode === 'crisis') {
+            // Urgent high-tempo AMR lockout pulse
+            const bass = [110.0, 110.0, 130.81, 103.83][step % 4];
+            const lead = [440.0, 0, 523.25, 493.88, 440.0, 415.3, 440.0, 0][step % 8];
+            this._playBgmNote(bass, 0.13, 'sawtooth', 0.18);
+            if (lead) this._playBgmNote(lead, 0.12, 'triangle', 0.16);
+            return;
+          }
+
+          // Cheerful Puyo-style arcade gameplay loop (16-step phrase)
+          const bassSeq = [
+            130.81, 0, 196.0, 0, 174.61, 0, 130.81, 0,
+            146.83, 0, 196.0, 0, 130.81, 196.0, 130.81, 0
+          ];
+          const melSeq = [
+            523.25, 659.25, 783.99, 659.25, 698.46, 880.0, 783.99, 0,
+            587.33, 698.46, 783.99, 659.25, 523.25, 587.33, 523.25, 0
+          ];
+          const b = bassSeq[step % 16];
+          const m = melSeq[step % 16];
+          if (b) this._playBgmNote(b, 0.22, 'triangle', 0.26);
+          if (m) this._playBgmNote(m, 0.17, 'sine', 0.22);
+        },
+        playSwitch() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(780, now + 0.06);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.075);
+        },
+        playShoot() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(340, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.09);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        },
+        playShieldBounce() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(1180, now);
+          osc.frequency.exponentialRampToValueAtTime(620, now + 0.08);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        },
+        playMiss() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(190, now);
+          osc.frequency.exponentialRampToValueAtTime(115, now + 0.12);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        },
+        playSingleKill() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(480, now);
+          osc.frequency.exponentialRampToValueAtTime(660, now + 0.1);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.13);
+        },
+        playPop(count) {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const baseNotes = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+          const idx = Math.min(baseNotes.length - 1, Math.max(0, count - 1));
+          const root = baseNotes[idx];
+          [1, 1.25, 1.5].forEach((mult, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = i === 0 ? 'triangle' : 'sine';
+            const t = now + i * 0.032;
+            osc.frequency.setValueAtTime(root * mult, t);
+            osc.frequency.exponentialRampToValueAtTime(root * mult * 1.14, t + 0.14);
+            gain.gain.setValueAtTime(0.16, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+            osc.connect(gain).connect(this.sfxGain);
+            osc.start(t);
+            osc.stop(t + 0.18);
+          });
+        },
+        playStageClear() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            const t = now + i * 0.09;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.18, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+            osc.connect(gain).connect(this.sfxGain);
+            osc.start(t);
+            osc.stop(t + 0.32);
+          });
+        },
+        playWater() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(620, now);
+          osc.frequency.exponentialRampToValueAtTime(1260, now + 0.12);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        },
+        playIsolate() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          [660, 880, 1174.66].forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            const t = now + i * 0.045;
+            osc.frequency.setValueAtTime(f, t);
+            gain.gain.setValueAtTime(0.13, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+            osc.connect(gain).connect(this.sfxGain);
+            osc.start(t);
+            osc.stop(t + 0.17);
+          });
+        },
+        playFireball() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(92, now + 0.18);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain).connect(this.sfxGain);
+          osc.start(now);
+          osc.stop(now + 0.21);
+        },
+        playAmrOverload() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          [540, 380, 540, 340].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            const t = now + i * 0.11;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.14, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            osc.connect(gain).connect(this.sfxGain);
+            osc.start(t);
+            osc.stop(t + 0.11);
+          });
+        },
+        playGameOver() {
+          const ctx = this.ensure();
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          [440, 392, 349.23, 261.63].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            const t = now + i * 0.12;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.12, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+            osc.connect(gain).connect(this.sfxGain);
+            osc.start(t);
+            osc.stop(t + 0.27);
+          });
+        }
+      };
+
+      /* ============================================================
+         3. ZIGZAG TRACK GEOMETRY (ARC-LENGTH PARAMETERIZED)
+      ============================================================ */
+      const BUBBLE_RADIUS = 0.5;
+      const BUBBLE_SPACING = BUBBLE_RADIUS * 2.16;
+      const SHOOTER_POS = { x: 0, y: -6.9 };
+      const PLAYFIELD_HALF_W = 5.4;
+
+      function buildZigzagPath() {
+        const anchors = [
+          { x: -4.4, y: 7.3 },
+          { x: -2.2, y: 6.7 },
+          { x: 0.0,  y: 7.15 },
+          { x: 2.2,  y: 6.5 },
+          { x: 4.35, y: 6.2 },
+          { x: 4.7,  y: 5.15 },
+          { x: 4.35, y: 4.25 },
+          { x: 2.2,  y: 4.55 },
+          { x: 0.0,  y: 3.95 },
+          { x: -2.2, y: 4.35 },
+          { x: -4.35, y: 3.65 },
+          { x: -4.7, y: 2.6 },
+          { x: -4.35, y: 1.7 },
+          { x: -2.2, y: 2.0 },
+          { x: 0.0,  y: 1.35 },
+          { x: 2.2,  y: 1.75 },
+          { x: 4.35, y: 1.05 },
+          { x: 4.7,  y: 0.0 },
+          { x: 4.35, y: -0.9 },
+          { x: 2.2,  y: -0.55 },
+          { x: 0.0,  y: -1.2 },
+          { x: -2.2, y: -0.8 },
+          { x: -4.35, y: -1.55 },
+          { x: -4.7, y: -2.6 },
+          { x: -4.2, y: -3.5 },
+          { x: -1.8, y: -3.2 },
+          { x: 0.6,  y: -3.85 },
+          { x: 3.2,  y: -3.65 },
+          { x: 4.15, y: -4.35 }
+        ];
+
+        const pts = [];
+        const samplesPerSeg = 26;
+        for (let i = 0; i < anchors.length - 1; i++) {
+          const p0 = anchors[Math.max(0, i - 1)];
+          const p1 = anchors[i];
+          const p2 = anchors[i + 1];
+          const p3 = anchors[Math.min(anchors.length - 1, i + 2)];
+          for (let j = 0; j < samplesPerSeg; j++) {
+            const t = j / samplesPerSeg;
+            const t2 = t * t;
+            const t3 = t2 * t;
+            const x = 0.5 * (
+              (2 * p1.x) +
+              (-p0.x + p2.x) * t +
+              (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+              (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3
+            );
+            const y = 0.5 * (
+              (2 * p1.y) +
+              (-p0.y + p2.y) * t +
+              (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+              (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3
+            );
+            pts.push({ x, y, s: 0, tx: 1, ty: 0 });
+          }
+        }
+        pts.push({ x: anchors[anchors.length - 1].x, y: anchors[anchors.length - 1].y, s: 0, tx: 1, ty: 0 });
+
+        let total = 0;
+        for (let i = 1; i < pts.length; i++) {
+          const dx = pts[i].x - pts[i - 1].x;
+          const dy = pts[i].y - pts[i - 1].y;
+          const d = Math.hypot(dx, dy);
+          total += d;
+          pts[i].s = total;
+          if (d > 1e-5) {
+            pts[i - 1].tx = dx / d;
+            pts[i - 1].ty = dy / d;
+          }
+        }
+        pts[pts.length - 1].tx = pts[pts.length - 2].tx;
+        pts[pts.length - 1].ty = pts[pts.length - 2].ty;
+
+        return { pts, totalLength: total };
+      }
+
+      const TRACK = buildZigzagPath();
+
+      function sampleTrack(s) {
+        const clamped = Math.max(0, Math.min(TRACK.totalLength, s));
+        const pts = TRACK.pts;
+        let lo = 0;
+        let hi = pts.length - 1;
+        while (lo < hi - 1) {
+          const mid = (lo + hi) >> 1;
+          if (pts[mid].s <= clamped) lo = mid;
+          else hi = mid;
+        }
+        const a = pts[lo];
+        const b = pts[hi];
+        const span = Math.max(1e-5, b.s - a.s);
+        const f = (clamped - a.s) / span;
+        return {
+          x: a.x + (b.x - a.x) * f,
+          y: a.y + (b.y - a.y) * f,
+          tx: a.tx + (b.tx - a.tx) * f,
+          ty: a.ty + (b.ty - a.ty) * f
+        };
+      }
+
+      /* ============================================================
+         4. PLAYCANVAS ENGINE SETUP & 3D PATHOGEN / WEAPON BUILDERS
+      ============================================================ */
+      const canvas = document.getElementById('application-canvas');
+      const canvasWrap = document.getElementById('canvas-wrap');
+
+      const app = new pc.Application(canvas, {
+        graphicsDeviceOptions: {
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance'
+        }
+      });
+
+      app.setCanvasFillMode(pc.FILLMODE_NONE);
+      app.setCanvasResolution(pc.RESOLUTION_AUTO);
+      app.scene.ambientLight = new pc.Color(0.45, 0.46, 0.62);
+
+      const cameraEntity = new pc.Entity('camera');
+      cameraEntity.addComponent('camera', {
+        clearColor: new pc.Color(0.08, 0.1, 0.24, 0.0),
+        projection: pc.PROJECTION_ORTHOGRAPHIC,
+        orthoHeight: 9.2,
+        nearClip: 0.1,
+        farClip: 60
+      });
+      cameraEntity.setPosition(0, 0.15, 20);
+      app.root.addChild(cameraEntity);
+
+      const keyLight = new pc.Entity('keyLight');
+      keyLight.addComponent('light', {
+        type: 'directional',
+        color: new pc.Color(1, 0.99, 0.96),
+        intensity: 1.45
+      });
+      keyLight.setEulerAngles(42, 28, 0);
+      app.root.addChild(keyLight);
+
+      const rimLight = new pc.Entity('rimLight');
+      rimLight.addComponent('light', {
+        type: 'directional',
+        color: new pc.Color(0.68, 0.82, 1.0),
+        intensity: 0.85
+      });
+      rimLight.setEulerAngles(-35, -145, 0);
+      app.root.addChild(rimLight);
+
+      function makeMaterial(rgb, emissiveRgb, glossVal, opacity) {
+        const mat = new pc.StandardMaterial();
+        mat.diffuse = new pc.Color(rgb[0], rgb[1], rgb[2]);
+        if (emissiveRgb) {
+          mat.emissive = new pc.Color(emissiveRgb[0], emissiveRgb[1], emissiveRgb[2]);
+        }
+        mat.specular = new pc.Color(0.95, 0.96, 1.0);
+        mat.gloss = glossVal !== undefined ? glossVal : 0.84;
+        if (opacity !== undefined && opacity < 1) {
+          mat.opacity = opacity;
+          mat.blendType = pc.BLEND_NORMAL;
+          mat.depthWrite = false;
+        }
+        mat.update();
+        return mat;
+      }
+
+      function applyMaterial(entity, mat) {
+        if (!entity || !entity.render) return;
+        entity.render.material = mat;
+        if (entity.render.meshInstances) {
+          for (let i = 0; i < entity.render.meshInstances.length; i++) {
+            entity.render.meshInstances[i].material = mat;
+          }
+        }
+      }
+
+      // Pathogen & Shield Materials
+      const fluBodyMat = makeMaterial([1.0, 0.83, 0.18], [0.32, 0.22, 0.02], 0.82);
+      const fluSpikeMat = makeMaterial([1.0, 0.62, 0.08], [0.36, 0.18, 0.02], 0.85);
+      const staphCocciMat = makeMaterial([0.08, 0.09, 0.12], [0.03, 0.035, 0.05], 0.94);
+      const staphAuraMat = makeMaterial([0.75, 0.8, 0.96], [0.4, 0.45, 0.68], 0.5, 0.22);
+      const ecoliBodyMat = makeMaterial([0.96, 0.22, 0.3], [0.28, 0.04, 0.06], 0.88);
+      const ecoliShineMat = makeMaterial([1.0, 0.84, 0.88], [0.45, 0.2, 0.25], 0.95, 0.8);
+      const pseudoBodyMat = makeMaterial([0.14, 0.88, 0.46], [0.04, 0.28, 0.12], 0.88);
+      const pseudoTailMat = makeMaterial([0.5, 1.0, 0.72], [0.18, 0.55, 0.32], 0.8, 0.78);
+
+      // Gold & Silver Shield + CRE Golden Glow Materials
+      const goldShieldMat = makeMaterial([1.0, 0.78, 0.14], [0.42, 0.26, 0.02], 0.96);
+      const goldTrimMat = makeMaterial([1.0, 0.92, 0.52], [0.55, 0.4, 0.06], 0.98);
+      const silverShieldMat = makeMaterial([0.84, 0.89, 0.98], [0.24, 0.28, 0.38], 0.96);
+      const silverTrimMat = makeMaterial([0.96, 0.98, 1.0], [0.42, 0.46, 0.56], 0.98);
+      const creGoldAuraMat = makeMaterial([1.0, 0.86, 0.2], [0.95, 0.72, 0.08], 0.9, 0.36);
+      const creSparkMat = makeMaterial([1.0, 0.94, 0.45], [0.98, 0.8, 0.14], 0.95, 0.85);
+
+      const pathogenParticleMats = [
+        fluBodyMat, staphCocciMat, ecoliBodyMat, pseudoBodyMat,
+        goldShieldMat, silverShieldMat, goldTrimMat
+      ];
+
+      // Weapon Materials
+      const tamifluYellowMat = makeMaterial([1.0, 0.82, 0.16], [0.34, 0.22, 0.02], 0.9);
+      const tamifluWhiteMat = makeMaterial([0.97, 0.98, 1.0], [0.25, 0.26, 0.3], 0.92);
+      const glassClearMat = makeMaterial([0.82, 0.94, 1.0], [0.16, 0.26, 0.34], 0.96, 0.72);
+      const glassGreenMat = makeMaterial([0.16, 0.88, 0.48], [0.05, 0.32, 0.16], 0.96, 0.82);
+      const glassGoldMat = makeMaterial([1.0, 0.76, 0.12], [0.42, 0.26, 0.02], 0.98, 0.88);
+      const capMetalMat = makeMaterial([0.84, 0.88, 0.95], [0.2, 0.22, 0.26], 0.95);
+      const labelRedMat = makeMaterial([0.94, 0.18, 0.26], [0.3, 0.04, 0.06], 0.78);
+      const labelBlackMat = makeMaterial([0.09, 0.1, 0.14], [0.03, 0.03, 0.05], 0.82);
+      const aimDotMats = WEAPONS.map((w) => makeMaterial(w.aimRgb, w.aimRgb.map((v) => v * 0.45), 0.9));
+
+      // Environment Materials
+      const trackBeadMat = makeMaterial([0.58, 0.65, 0.95], [0.22, 0.26, 0.52], 0.7, 0.45);
+      const startPortalMat = makeMaterial([0.3, 0.92, 1.0], [0.15, 0.65, 0.95], 0.9);
+      const startCoreMat = makeMaterial([0.12, 0.55, 0.88], [0.06, 0.3, 0.55], 0.8, 0.65);
+      const endPortalMat = makeMaterial([1.0, 0.22, 0.38], [0.75, 0.1, 0.22], 0.9);
+      const endCoreMat = makeMaterial([0.55, 0.06, 0.18], [0.35, 0.04, 0.1], 0.8, 0.68);
+      const turretBaseMat = makeMaterial([0.28, 0.34, 0.68], [0.1, 0.14, 0.32], 0.85);
+      const turretGoldMat = makeMaterial([1.0, 0.82, 0.32], [0.35, 0.22, 0.04], 0.9);
+      const missParticleMat = makeMaterial([0.75, 0.8, 0.9], [0.2, 0.22, 0.28], 0.7);
+      const slotPadMat = makeMaterial([0.22, 0.45, 0.78], [0.1, 0.26, 0.48], 0.85, 0.36);
+      const slotRingMat = makeMaterial([0.46, 0.9, 1.0], [0.24, 0.68, 0.92], 0.92, 0.88);
+      const slotPlusMat = makeMaterial([0.85, 0.96, 1.0], [0.45, 0.78, 0.98], 0.9, 0.72);
+      const skinMat = makeMaterial([1.0, 0.84, 0.7], [0.16, 0.1, 0.06], 0.6);
+      const fireRedMat = makeMaterial([0.92, 0.18, 0.22], [0.3, 0.04, 0.05], 0.82);
+      const hoseBlueMat = makeMaterial([0.2, 0.72, 1.0], [0.06, 0.35, 0.6], 0.9);
+      const waterJetMat = makeMaterial([0.35, 0.88, 1.0], [0.2, 0.7, 1.0], 0.95, 0.9);
+      const tuxBlackMat = makeMaterial([0.1, 0.12, 0.18], [0.03, 0.04, 0.06], 0.85);
+      const batonMat = makeMaterial([1.0, 0.97, 0.85], [0.55, 0.5, 0.3], 0.95);
+      const isolateFieldMat = makeMaterial([0.32, 0.9, 1.0], [0.22, 0.72, 0.95], 0.9, 0.26);
+      const mageRobeMat = makeMaterial([0.58, 0.22, 0.92], [0.24, 0.06, 0.42], 0.82);
+      const mageHairMat = makeMaterial([0.28, 0.14, 0.08], [0.06, 0.02, 0.01], 0.7);
+      const staffWoodMat = makeMaterial([0.62, 0.38, 0.18], [0.14, 0.07, 0.02], 0.65);
+      const fireballMat = makeMaterial([1.0, 0.45, 0.06], [0.98, 0.38, 0.04], 0.95);
+      const charEyeWhiteMat = makeMaterial([1.0, 1.0, 1.0], [0.3, 0.3, 0.3], 0.95);
+      const charEyePupilMat = makeMaterial([0.08, 0.08, 0.16], [0, 0, 0], 0.95);
+      const blushMat = makeMaterial([1.0, 0.56, 0.64], [0.22, 0.08, 0.1], 0.6);
+      const bootDarkMat = makeMaterial([0.14, 0.15, 0.22], [0.02, 0.02, 0.04], 0.85);
+      const visorGlassMat = makeMaterial([0.7, 0.92, 1.0], [0.2, 0.4, 0.55], 0.95, 0.62);
+      const silverHairMat = makeMaterial([0.78, 0.82, 0.9], [0.16, 0.18, 0.24], 0.78);
+      const mageSashMat = makeMaterial([0.96, 0.32, 0.68], [0.34, 0.08, 0.2], 0.85);
+      const tealScrubMat = makeMaterial([0.12, 0.68, 0.74], [0.04, 0.22, 0.26], 0.75);
+
+      function createRuneRing(name, radius, orbCount, orbSize, ringMat, coreMat) {
+        const ring = new pc.Entity(name);
+        if (coreMat) {
+          const core = new pc.Entity(name + '_core');
+          core.addComponent('render', { type: 'cylinder', material: coreMat });
+          core.setEulerAngles(90, 0, 0);
+          core.setLocalScale(radius * 1.75, 0.14, radius * 1.75);
+          ring.addChild(core);
+        }
+        for (let i = 0; i < orbCount; i++) {
+          const ang = (Math.PI * 2 * i) / orbCount;
+          const node = new pc.Entity(name + '_orb_' + i);
+          node.addComponent('render', { type: 'sphere', material: ringMat });
+          node.setLocalPosition(Math.cos(ang) * radius, Math.sin(ang) * radius, 0.08);
+          const sc = (i % 2 === 0) ? orbSize : orbSize * 0.72;
+          node.setLocalScale(sc, sc, sc);
+          ring.addChild(node);
+        }
+        return ring;
+      }
+
+      /* ----- Large Front Shield Builder (Gold for MRSA/CRE, Silver for ESBL) ----- */
+      function createLargeShield(isGold) {
+        const mainMat = isGold ? goldShieldMat : silverShieldMat;
+        const trimMat = isGold ? goldTrimMat : silverTrimMat;
+        const shield = new pc.Entity('frontShield');
+
+        // Upper broad shield plate
+        const upper = new pc.Entity('shieldUpper');
+        upper.addComponent('render', { type: 'box', material: mainMat });
+        upper.setLocalPosition(0, 0.08, 0);
+        upper.setLocalScale(0.62, 0.38, 0.12);
+        shield.addChild(upper);
+
+        // Lower tapered heater-shield point
+        const lower = new pc.Entity('shieldLower');
+        lower.addComponent('render', { type: 'box', material: mainMat });
+        lower.setLocalPosition(0, -0.14, 0);
+        lower.setLocalEulerAngles(0, 0, 45);
+        lower.setLocalScale(0.43, 0.43, 0.115);
+        shield.addChild(lower);
+
+        // Top metallic crest bar
+        const crest = new pc.Entity('shieldCrest');
+        crest.addComponent('render', { type: 'box', material: trimMat });
+        crest.setLocalPosition(0, 0.27, 0.02);
+        crest.setLocalScale(0.66, 0.075, 0.13);
+        shield.addChild(crest);
+
+        // Raised center boss + vertical rib
+        const rib = new pc.Entity('shieldRib');
+        rib.addComponent('render', { type: 'box', material: trimMat });
+        rib.setLocalPosition(0, -0.02, 0.055);
+        rib.setLocalScale(0.085, 0.56, 0.06);
+        shield.addChild(rib);
+
+        const cross = new pc.Entity('shieldCross');
+        cross.addComponent('render', { type: 'box', material: trimMat });
+        cross.setLocalPosition(0, 0.06, 0.055);
+        cross.setLocalScale(0.48, 0.08, 0.06);
+        shield.addChild(cross);
+
+        const boss = new pc.Entity('shieldBoss');
+        boss.addComponent('render', { type: 'sphere', material: trimMat });
+        boss.setLocalPosition(0, 0.06, 0.08);
+        boss.setLocalScale(0.18, 0.18, 0.1);
+        shield.addChild(boss);
+
+        shield.setLocalPosition(0, -0.04, 0.42);
+        return shield;
+      }
+
+      /* ----- 7 Distinct 3D Pathogens ----- */
+      const FLU_SPIKE_DIRS = [
+        [0, 1, 0], [0, -1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1],
+        [0.7, 0.7, 0.15], [-0.7, 0.7, 0.15], [0.7, -0.7, 0.15], [-0.7, -0.7, 0.15],
+        [0.55, 0.35, 0.75], [-0.55, 0.35, 0.75], [0.55, -0.35, 0.75], [-0.55, -0.35, 0.75],
+        [0, 0.65, 0.76], [0, -0.65, 0.76]
+      ];
+
+      const STAPH_COCCI_OFFSETS = [
+        [0, 0, 0.12],
+        [-0.24, 0.2, 0.05], [0.24, 0.2, 0.05],
+        [-0.26, -0.18, 0.05], [0.26, -0.18, 0.05],
+        [0, 0.32, -0.02], [0, -0.32, -0.02],
+        [-0.36, 0.02, -0.04], [0.36, 0.02, -0.04],
+        [-0.14, 0.06, 0.24], [0.15, -0.08, 0.24]
+      ];
+
+      function addStaphCluster(parent) {
+        const aura = new pc.Entity('staphAura');
+        aura.addComponent('render', { type: 'sphere', material: staphAuraMat });
+        aura.setLocalPosition(0, 0, -0.18);
+        aura.setLocalScale(1.04, 1.04, 0.25);
+        parent.addChild(aura);
+
+        for (let i = 0; i < STAPH_COCCI_OFFSETS.length; i++) {
+          const o = STAPH_COCCI_OFFSETS[i];
+          const coccus = new pc.Entity('coccus_' + i);
+          coccus.addComponent('render', { type: 'sphere', material: staphCocciMat });
+          coccus.setLocalPosition(o[0], o[1], o[2]);
+          coccus.setLocalScale(0.35, 0.35, 0.35);
+          parent.addChild(coccus);
+        }
+      }
+
+      function addEcoliBody(parent) {
+        const body = new pc.Entity('ecoliBody');
+        body.addComponent('render', { type: 'capsule', material: ecoliBodyMat });
+        body.setLocalScale(0.54, 0.56, 0.54);
+        body.setLocalEulerAngles(0, 0, 58);
+        parent.addChild(body);
+
+        const shine = new pc.Entity('ecoliShine');
+        shine.addComponent('render', { type: 'capsule', material: ecoliShineMat });
+        shine.setLocalPosition(-0.08, 0.11, 0.22);
+        shine.setLocalScale(0.12, 0.22, 0.08);
+        shine.setLocalEulerAngles(0, 0, 58);
+        parent.addChild(shine);
+      }
+
+      function createPathogenEntity(typeId) {
+        const root = new pc.Entity('pathogen_' + typeId);
+        const visual = new pc.Entity('visual');
+        root.addChild(visual);
+        root._visual = visual;
+
+        if (typeId === 0) {
+          // 0. 流感病毒：黃色球形 + 許多延伸受器
+          const core = new pc.Entity('fluCore');
+          core.addComponent('render', { type: 'sphere', material: fluBodyMat });
+          core.setLocalScale(0.68, 0.68, 0.68);
+          visual.addChild(core);
+
+          for (let i = 0; i < FLU_SPIKE_DIRS.length; i++) {
+            const d = FLU_SPIKE_DIRS[i];
+            const len = Math.hypot(d[0], d[1], d[2]) || 1;
+            const nx = d[0] / len;
+            const ny = d[1] / len;
+            const nz = d[2] / len;
+
+            const spikeWrap = new pc.Entity('spikeWrap');
+            const q = new pc.Quat();
+            if (ny > 0.999) {
+              q.set(0, 0, 0, 1);
+            } else if (ny < -0.999) {
+              q.setFromAxisAngle(pc.Vec3.RIGHT, 180);
+            } else {
+              const axis = new pc.Vec3(nz, 0, -nx).normalize();
+              const angleDeg = (Math.acos(Math.max(-1, Math.min(1, ny))) * 180) / Math.PI;
+              q.setFromAxisAngle(axis, angleDeg);
+            }
+            spikeWrap.setLocalRotation(q);
+
+            const stalk = new pc.Entity('stalk');
+            stalk.addComponent('render', { type: 'cylinder', material: fluSpikeMat });
+            stalk.setLocalPosition(0, 0.39, 0);
+            stalk.setLocalScale(0.055, 0.2, 0.055);
+            spikeWrap.addChild(stalk);
+
+            const knob = new pc.Entity('knob');
+            knob.addComponent('render', { type: 'sphere', material: fluBodyMat });
+            knob.setLocalPosition(0, 0.49, 0);
+            knob.setLocalScale(0.115, 0.085, 0.115);
+            spikeWrap.addChild(knob);
+
+            visual.addChild(spikeWrap);
+          }
+        } else if (typeId === 1) {
+          // 1. 葡萄球菌：黑色小圓球聚集成一團
+          addStaphCluster(visual);
+        } else if (typeId === 2) {
+          // 2. 大腸桿菌：紅色臘腸形狀
+          addEcoliBody(visual);
+        } else if (typeId === 3) {
+          // 3. 綠膿桿菌：綠色長條桿狀
+          const rod = new pc.Entity('pseudoRod');
+          rod.addComponent('render', { type: 'capsule', material: pseudoBodyMat });
+          rod.setLocalScale(0.32, 0.62, 0.32);
+          rod.setLocalEulerAngles(0, 0, -48);
+          visual.addChild(rod);
+
+          const tail1 = new pc.Entity('pseudoTail1');
+          tail1.addComponent('render', { type: 'cylinder', material: pseudoTailMat });
+          tail1.setLocalPosition(-0.46, -0.34, 0);
+          tail1.setLocalScale(0.045, 0.26, 0.045);
+          tail1.setLocalEulerAngles(0, 0, -68);
+          visual.addChild(tail1);
+
+          const tail2 = new pc.Entity('pseudoTail2');
+          tail2.addComponent('render', { type: 'cylinder', material: pseudoTailMat });
+          tail2.setLocalPosition(-0.62, -0.45, 0);
+          tail2.setLocalScale(0.038, 0.22, 0.038);
+          tail2.setLocalEulerAngles(0, 0, -32);
+          visual.addChild(tail2);
+        } else if (typeId === 4) {
+          // 4. MRSA：葡萄球菌造型 + 身前大型金色盾牌
+          addStaphCluster(visual);
+          const shield = createLargeShield(true);
+          root.addChild(shield);
+          root._shield = shield;
+        } else if (typeId === 5) {
+          // 5. ESBL：大腸桿菌造型 + 身前大型銀色盾牌
+          addEcoliBody(visual);
+          const shield = createLargeShield(false);
+          root.addChild(shield);
+          root._shield = shield;
+        } else {
+          // 6. CRE：大腸桿菌造型 + 身上發出金色光芒 + 身前大型金色盾牌
+          addEcoliBody(visual);
+
+          const auraWrap = new pc.Entity('creAuraWrap');
+          const glowHalo = new pc.Entity('creHalo');
+          glowHalo.addComponent('render', { type: 'sphere', material: creGoldAuraMat });
+          glowHalo.setLocalPosition(0, 0, -0.14);
+          glowHalo.setLocalScale(1.26, 1.26, 0.4);
+          auraWrap.addChild(glowHalo);
+
+          // Orbiting golden light sparks around CRE body
+          for (let i = 0; i < 6; i++) {
+            const ang = (Math.PI * 2 * i) / 6;
+            const spark = new pc.Entity('creSpark_' + i);
+            spark.addComponent('render', { type: 'sphere', material: creSparkMat });
+            spark.setLocalPosition(Math.cos(ang) * 0.62, Math.sin(ang) * 0.62, -0.02);
+            spark.setLocalScale(0.14, 0.14, 0.14);
+            auraWrap.addChild(spark);
+          }
+          root.addChild(auraWrap);
+          root._creAura = auraWrap;
+
+          const shield = createLargeShield(true);
+          root.addChild(shield);
+          root._shield = shield;
+        }
+
+        app.root.addChild(root);
+        return root;
+      }
+
+      /* ----- 7 Distinct 3D Antimicrobial Weapons ----- */
+      function createWeaponEntity(weaponId, scaleFactor) {
+        const s = scaleFactor || 1.0;
+        const root = new pc.Entity('weapon_' + weaponId);
+        const holder = new pc.Entity('holder');
+        holder.setLocalScale(s, s, s);
+        root.addChild(holder);
+
+        if (weaponId === 0) {
+          // 0. Tamiflu：黃白色膠囊
+          const topCyl = new pc.Entity('capTop');
+          topCyl.addComponent('render', { type: 'cylinder', material: tamifluYellowMat });
+          topCyl.setLocalPosition(0, 0.16, 0);
+          topCyl.setLocalScale(0.38, 0.32, 0.38);
+          holder.addChild(topCyl);
+
+          const topDome = new pc.Entity('capTopDome');
+          topDome.addComponent('render', { type: 'sphere', material: tamifluYellowMat });
+          topDome.setLocalPosition(0, 0.32, 0);
+          topDome.setLocalScale(0.38, 0.38, 0.38);
+          holder.addChild(topDome);
+
+          const botCyl = new pc.Entity('capBot');
+          botCyl.addComponent('render', { type: 'cylinder', material: tamifluWhiteMat });
+          botCyl.setLocalPosition(0, -0.16, 0);
+          botCyl.setLocalScale(0.37, 0.32, 0.37);
+          holder.addChild(botCyl);
+
+          const botDome = new pc.Entity('capBotDome');
+          botDome.addComponent('render', { type: 'sphere', material: tamifluWhiteMat });
+          botDome.setLocalPosition(0, -0.32, 0);
+          botDome.setLocalScale(0.37, 0.37, 0.37);
+          holder.addChild(botDome);
+        } else {
+          // Glass Vial Base (Cefazolin / Oxacillin / Ciprofloxacin / Vancomycin / Ertapenem / Zavicefta)
+          let bottleMat = glassClearMat;
+          let capMat = capMetalMat;
+          if (weaponId === 3) {
+            bottleMat = glassGreenMat;
+          } else if (weaponId === 6) {
+            bottleMat = glassGoldMat;
+            capMat = goldTrimMat;
+          } else if (weaponId === 4 || weaponId === 5) {
+            capMat = goldShieldMat;
+          }
+
+          const body = new pc.Entity('vialBody');
+          body.addComponent('render', { type: 'cylinder', material: bottleMat });
+          body.setLocalPosition(0, -0.06, 0);
+          body.setLocalScale(0.46, 0.62, 0.46);
+          holder.addChild(body);
+
+          const neck = new pc.Entity('vialNeck');
+          neck.addComponent('render', { type: 'cylinder', material: bottleMat });
+          neck.setLocalPosition(0, 0.31, 0);
+          neck.setLocalScale(0.24, 0.16, 0.24);
+          holder.addChild(neck);
+
+          const cap = new pc.Entity('vialCap');
+          cap.addComponent('render', { type: 'cylinder', material: capMat });
+          cap.setLocalPosition(0, 0.43, 0);
+          cap.setLocalScale(0.3, 0.12, 0.3);
+          holder.addChild(cap);
+
+          const hasRedLabel = (weaponId === 1 || weaponId === 5);
+          const hasBlackLabel = (weaponId === 2 || weaponId === 4);
+          const hasGoldFrame = (weaponId === 4 || weaponId === 5);
+
+          if (hasRedLabel || hasBlackLabel) {
+            const lblMat = hasRedLabel ? labelRedMat : labelBlackMat;
+            const label = new pc.Entity('vialLabel');
+            label.addComponent('render', { type: 'cylinder', material: lblMat });
+            label.setLocalPosition(0, -0.06, 0);
+            label.setLocalScale(0.49, 0.34, 0.49);
+            holder.addChild(label);
+
+            if (hasGoldFrame) {
+              // Prominent gold borders framing top & bottom of label (Vancomycin & Ertapenem)
+              [0.115, -0.235].forEach((ry) => {
+                const rim = new pc.Entity('goldRim');
+                rim.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+                rim.setLocalPosition(0, ry, 0);
+                rim.setLocalScale(0.515, 0.055, 0.515);
+                holder.addChild(rim);
+              });
+            }
+
+            const stripe = new pc.Entity('vialStripe');
+            stripe.addComponent('render', { type: 'cylinder', material: hasGoldFrame ? goldTrimMat : tamifluWhiteMat });
+            stripe.setLocalPosition(0, -0.02, 0);
+            stripe.setLocalScale(0.505, 0.045, 0.505);
+            holder.addChild(stripe);
+          }
+        }
+
+        app.root.addChild(root);
+        return root;
+      }
+
+      // Build static 3D Zigzag Track Beads & Portals
+      const decorRoot = new pc.Entity('decorRoot');
+      app.root.addChild(decorRoot);
+
+      const beadCount = 92;
+      for (let i = 0; i <= beadCount; i++) {
+        const s = (i / beadCount) * TRACK.totalLength;
+        const p = sampleTrack(s);
+        const bead = new pc.Entity('trackBead');
+        bead.addComponent('render', { type: 'sphere', material: trackBeadMat });
+        bead.setPosition(p.x, p.y, -0.85);
+        const sz = (i % 4 === 0) ? 0.18 : 0.11;
+        bead.setLocalScale(sz, sz, sz);
+        decorRoot.addChild(bead);
+      }
+
+      const startPt = sampleTrack(0);
+      const startPortal = createRuneRing('startPortal', 0.72, 10, 0.2, startPortalMat, startCoreMat);
+      startPortal.setPosition(startPt.x, startPt.y, -0.55);
+      decorRoot.addChild(startPortal);
+
+      const endPt = sampleTrack(TRACK.totalLength);
+      const endPortal = createRuneRing('endPortal', 0.78, 12, 0.22, endPortalMat, endCoreMat);
+      endPortal.setPosition(endPt.x, endPt.y, -0.55);
+      decorRoot.addChild(endPortal);
+
+      // 6 Defense Placement Circles (4 inner bends + 2 center pockets)
+      const DEFENSE_SLOT_COORDS = [
+        { id: 0, label: '右上轉彎內側', x: 3.15,  y: 5.38 },
+        { id: 1, label: '上方中央',     x: -0.15, y: 5.52 },
+        { id: 2, label: '左上轉彎內側', x: -3.15, y: 2.86 },
+        { id: 3, label: '右下轉彎內側', x: 3.15,  y: 0.26 },
+        { id: 4, label: '下方中央',     x: -0.05, y: 0.08 },
+        { id: 5, label: '左下轉彎內側', x: -3.15, y: -2.36 }
+      ];
+
+      const defenseSlots = [];
+      for (let i = 0; i < DEFENSE_SLOT_COORDS.length; i++) {
+        const scfg = DEFENSE_SLOT_COORDS[i];
+        const slotRoot = new pc.Entity('defenseSlot_' + scfg.id);
+        slotRoot.setPosition(scfg.x, scfg.y, -0.52);
+
+        const pad = new pc.Entity('slotPad');
+        pad.addComponent('render', { type: 'cylinder', material: slotPadMat });
+        pad.setEulerAngles(90, 0, 0);
+        pad.setLocalScale(0.82, 0.08, 0.82);
+        slotRoot.addChild(pad);
+
+        const ring = createRuneRing('slotRing_' + scfg.id, 0.44, 16, 0.075, slotRingMat, null);
+        ring.setLocalPosition(0, 0, 0.02);
+        slotRoot.addChild(ring);
+
+        // Subtle center '+' marker indicating empty defender slot
+        const plusH = new pc.Entity('slotPlusH');
+        plusH.addComponent('render', { type: 'box', material: slotPlusMat });
+        plusH.setLocalPosition(0, 0, 0.06);
+        plusH.setLocalScale(0.24, 0.045, 0.03);
+        slotRoot.addChild(plusH);
+
+        const plusV = new pc.Entity('slotPlusV');
+        plusV.addComponent('render', { type: 'box', material: slotPlusMat });
+        plusV.setLocalPosition(0, 0, 0.06);
+        plusV.setLocalScale(0.045, 0.24, 0.03);
+        slotRoot.addChild(plusV);
+
+        decorRoot.addChild(slotRoot);
+        let nearestS = 0;
+        let minTrackDist = Infinity;
+        for (let k = 0; k < TRACK.pts.length; k++) {
+          const d = Math.hypot(TRACK.pts[k].x - scfg.x, TRACK.pts[k].y - scfg.y);
+          if (d < minTrackDist) {
+            minTrackDist = d;
+            nearestS = TRACK.pts[k].s;
+          }
+        }
+
+        defenseSlots.push({
+          id: scfg.id,
+          label: scfg.label,
+          x: scfg.x,
+          y: scfg.y,
+          nearestS,
+          radius: 0.44,
+          occupant: null,
+          entity: slotRoot,
+          ringEntity: ring,
+          plusH,
+          plusV,
+          phase: i * 1.05
+        });
+      }
+
+      const DEFENDER_RANGE = BUBBLE_SPACING * 4; // 4 bubble widths
+      const ISOLATION_CAPTURE_RANGE = BUBBLE_SPACING * 2.55;
+
+      function addCuteFace(parent, headY, headZ, scale) {
+        const sc = scale || 1.0;
+        [-0.085, 0.085].forEach((ex) => {
+          const ew = new pc.Entity('eyeW');
+          ew.addComponent('render', { type: 'sphere', material: charEyeWhiteMat });
+          ew.setLocalPosition(ex * sc, (headY + 0.015) * sc, (headZ + 0.135) * sc);
+          ew.setLocalScale(0.085 * sc, 0.095 * sc, 0.05 * sc);
+          parent.addChild(ew);
+
+          const ep = new pc.Entity('eyeP');
+          ep.addComponent('render', { type: 'sphere', material: charEyePupilMat });
+          ep.setLocalPosition(ex * sc, (headY + 0.01) * sc, (headZ + 0.165) * sc);
+          ep.setLocalScale(0.048 * sc, 0.055 * sc, 0.03 * sc);
+          parent.addChild(ep);
+
+          const bl = new pc.Entity('blush');
+          bl.addComponent('render', { type: 'sphere', material: blushMat });
+          bl.setLocalPosition(ex * 1.48 * sc, (headY - 0.045) * sc, (headZ + 0.12) * sc);
+          bl.setLocalScale(0.065 * sc, 0.04 * sc, 0.03 * sc);
+          parent.addChild(bl);
+        });
+      }
+
+      function createDefenderModel(kind) {
+        const root = new pc.Entity('defender_' + kind);
+        if (kind === 'handwash') {
+          // 消防員：紅衣防火服＋雙反光金條＋水箱背包＋頭盔護目鏡＋水帶噴嘴＋可愛表情
+          [-0.1, 0.1].forEach((bx) => {
+            const boot = new pc.Entity('boot');
+            boot.addComponent('render', { type: 'box', material: bootDarkMat });
+            boot.setLocalPosition(bx, -0.36, 0.18);
+            boot.setLocalScale(0.14, 0.12, 0.18);
+            root.addChild(boot);
+          });
+
+          const tank = new pc.Entity('waterTank');
+          tank.addComponent('render', { type: 'cylinder', material: capMetalMat });
+          tank.setLocalPosition(0, -0.06, -0.04);
+          tank.setLocalScale(0.32, 0.42, 0.2);
+          root.addChild(tank);
+
+          const coat = new pc.Entity('coat');
+          coat.addComponent('render', { type: 'cylinder', material: fireRedMat });
+          coat.setLocalPosition(0, -0.1, 0.16);
+          coat.setLocalScale(0.44, 0.48, 0.36);
+          root.addChild(coat);
+
+          // Double reflective safety stripes
+          [-0.03, -0.22].forEach((sy) => {
+            const stripe = new pc.Entity('coatStripe');
+            stripe.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+            stripe.setLocalPosition(0, sy, 0.16);
+            stripe.setLocalScale(0.46, 0.065, 0.38);
+            root.addChild(stripe);
+          });
+
+          const head = new pc.Entity('head');
+          head.addComponent('render', { type: 'sphere', material: skinMat });
+          head.setLocalPosition(0, 0.24, 0.18);
+          head.setLocalScale(0.34, 0.34, 0.34);
+          root.addChild(head);
+          addCuteFace(root, 0.24, 0.18, 1.0);
+
+          // Detailed firefighter helmet + crest + clear visor
+          const helmet = new pc.Entity('helmet');
+          helmet.addComponent('render', { type: 'sphere', material: fireRedMat });
+          helmet.setLocalPosition(0, 0.34, 0.17);
+          helmet.setLocalScale(0.38, 0.24, 0.38);
+          root.addChild(helmet);
+
+          const crest = new pc.Entity('helmetCrest');
+          crest.addComponent('render', { type: 'box', material: goldTrimMat });
+          crest.setLocalPosition(0, 0.38, 0.34);
+          crest.setLocalScale(0.11, 0.14, 0.06);
+          root.addChild(crest);
+
+          const brim = new pc.Entity('brim');
+          brim.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+          brim.setLocalPosition(0, 0.29, 0.17);
+          brim.setLocalScale(0.48, 0.05, 0.48);
+          root.addChild(brim);
+
+          const visor = new pc.Entity('visor');
+          visor.addComponent('render', { type: 'box', material: visorGlassMat });
+          visor.setLocalPosition(0, 0.26, 0.34);
+          visor.setLocalScale(0.28, 0.1, 0.04);
+          root.addChild(visor);
+
+          // Water hose arm + pressurized nozzle + water bead
+          const hoseArm = new pc.Entity('hoseArm');
+          hoseArm.setLocalPosition(0.18, -0.02, 0.28);
+
+          const sleeve = new pc.Entity('sleeve');
+          sleeve.addComponent('render', { type: 'cylinder', material: fireRedMat });
+          sleeve.setLocalPosition(0.06, 0.01, 0);
+          sleeve.setLocalEulerAngles(0, 0, -70);
+          sleeve.setLocalScale(0.12, 0.22, 0.12);
+          hoseArm.addChild(sleeve);
+
+          const hose = new pc.Entity('hose');
+          hose.addComponent('render', { type: 'cylinder', material: hoseBlueMat });
+          hose.setLocalPosition(0.18, 0.06, 0);
+          hose.setLocalEulerAngles(0, 0, -68);
+          hose.setLocalScale(0.1, 0.46, 0.1);
+          hoseArm.addChild(hose);
+
+          const nozzle = new pc.Entity('nozzle');
+          nozzle.addComponent('render', { type: 'cone', material: capMetalMat });
+          nozzle.setLocalPosition(0.39, 0.15, 0);
+          nozzle.setLocalEulerAngles(0, 0, -68);
+          nozzle.setLocalScale(0.15, 0.18, 0.15);
+          hoseArm.addChild(nozzle);
+
+          const tipDrop = new pc.Entity('tipDrop');
+          tipDrop.addComponent('render', { type: 'sphere', material: waterJetMat });
+          tipDrop.setLocalPosition(0.48, 0.19, 0);
+          tipDrop.setLocalScale(0.12, 0.12, 0.12);
+          hoseArm.addChild(tipDrop);
+
+          root.addChild(hoseArm);
+          root._arm = hoseArm;
+        } else if (kind === 'isolation') {
+          // 指揮家：燕尾服＋紅領結＋金鈕扣＋銀絲背頭＋左掌攔阻＋右持發光指揮棒
+          [-0.09, 0.09].forEach((bx) => {
+            const shoe = new pc.Entity('shoe');
+            shoe.addComponent('render', { type: 'box', material: bootDarkMat });
+            shoe.setLocalPosition(bx, -0.37, 0.18);
+            shoe.setLocalScale(0.12, 0.1, 0.18);
+            root.addChild(shoe);
+          });
+
+          const tux = new pc.Entity('tux');
+          tux.addComponent('render', { type: 'cylinder', material: tuxBlackMat });
+          tux.setLocalPosition(0, -0.1, 0.16);
+          tux.setLocalScale(0.42, 0.5, 0.34);
+          root.addChild(tux);
+
+          // Flowing tuxedo coattails
+          [-0.12, 0.12].forEach((tx) => {
+            const tail = new pc.Entity('coattail');
+            tail.addComponent('render', { type: 'box', material: tuxBlackMat });
+            tail.setLocalPosition(tx, -0.26, 0.04);
+            tail.setLocalEulerAngles(14, 0, tx > 0 ? 10 : -10);
+            tail.setLocalScale(0.14, 0.28, 0.06);
+            root.addChild(tail);
+          });
+
+          const shirt = new pc.Entity('shirt');
+          shirt.addComponent('render', { type: 'box', material: tamifluWhiteMat });
+          shirt.setLocalPosition(0, -0.02, 0.32);
+          shirt.setLocalScale(0.15, 0.3, 0.05);
+          root.addChild(shirt);
+
+          const bowtie = new pc.Entity('bowtie');
+          bowtie.addComponent('render', { type: 'box', material: fireRedMat });
+          bowtie.setLocalPosition(0, 0.09, 0.35);
+          bowtie.setLocalScale(0.16, 0.065, 0.045);
+          root.addChild(bowtie);
+
+          [-0.04, -0.14].forEach((by) => {
+            const btn = new pc.Entity('tuxBtn');
+            btn.addComponent('render', { type: 'sphere', material: goldTrimMat });
+            btn.setLocalPosition(0, by, 0.355);
+            btn.setLocalScale(0.05, 0.05, 0.03);
+            root.addChild(btn);
+          });
+
+          const head = new pc.Entity('head');
+          head.addComponent('render', { type: 'sphere', material: skinMat });
+          head.setLocalPosition(0, 0.24, 0.18);
+          head.setLocalScale(0.34, 0.34, 0.34);
+          root.addChild(head);
+          addCuteFace(root, 0.24, 0.18, 1.0);
+
+          const hair = new pc.Entity('hair');
+          hair.addComponent('render', { type: 'sphere', material: tuxBlackMat });
+          hair.setLocalPosition(0, 0.33, 0.15);
+          hair.setLocalScale(0.36, 0.22, 0.36);
+          root.addChild(hair);
+
+          // Distinguished silver temple streaks
+          [-0.16, 0.16].forEach((sx) => {
+            const streak = new pc.Entity('silverHair');
+            streak.addComponent('render', { type: 'sphere', material: silverHairMat });
+            streak.setLocalPosition(sx, 0.29, 0.22);
+            streak.setLocalScale(0.09, 0.11, 0.09);
+            root.addChild(streak);
+          });
+
+          // Left commanding hand
+          const leftHand = new pc.Entity('leftHand');
+          leftHand.addComponent('render', { type: 'sphere', material: tamifluWhiteMat });
+          leftHand.setLocalPosition(-0.28, 0.06, 0.26);
+          leftHand.setLocalScale(0.12, 0.12, 0.12);
+          root.addChild(leftHand);
+
+          // Right baton arm
+          const batonArm = new pc.Entity('batonArm');
+          batonArm.setLocalPosition(0.22, 0.06, 0.28);
+
+          const glove = new pc.Entity('rightGlove');
+          glove.addComponent('render', { type: 'sphere', material: tamifluWhiteMat });
+          glove.setLocalPosition(0.04, 0.04, 0);
+          glove.setLocalScale(0.11, 0.11, 0.11);
+          batonArm.addChild(glove);
+
+          const baton = new pc.Entity('baton');
+          baton.addComponent('render', { type: 'cylinder', material: batonMat });
+          baton.setLocalPosition(0.2, 0.24, 0);
+          baton.setLocalEulerAngles(0, 0, -38);
+          baton.setLocalScale(0.045, 0.62, 0.045);
+          batonArm.addChild(baton);
+
+          const tip = new pc.Entity('batonTip');
+          tip.addComponent('render', { type: 'sphere', material: goldTrimMat });
+          tip.setLocalPosition(0.39, 0.47, 0);
+          tip.setLocalScale(0.11, 0.11, 0.11);
+          batonArm.addChild(tip);
+
+          root.addChild(batonArm);
+          root._arm = batonArm;
+
+          const field = new pc.Entity('isoField');
+          field.addComponent('render', { type: 'sphere', material: isolateFieldMat });
+          field.setLocalPosition(0, 0, 0.05);
+          field.setLocalScale(1.15, 1.15, 0.2);
+          field.enabled = false;
+          root.addChild(field);
+          root._isoField = field;
+        } else {
+          // 女性魔法師：紫金滾邊法袍＋桃紅腰帶＋長髮側辮＋星帶尖帽＋雕紋火球魔杖
+          const robe = new pc.Entity('robe');
+          robe.addComponent('render', { type: 'cone', material: mageRobeMat });
+          robe.setLocalPosition(0, -0.1, 0.16);
+          robe.setLocalScale(0.54, 0.6, 0.44);
+          root.addChild(robe);
+
+          const hemTrim = new pc.Entity('hemTrim');
+          hemTrim.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+          hemTrim.setLocalPosition(0, -0.37, 0.16);
+          hemTrim.setLocalScale(0.54, 0.055, 0.44);
+          root.addChild(hemTrim);
+
+          const sash = new pc.Entity('mageSash');
+          sash.addComponent('render', { type: 'cylinder', material: mageSashMat });
+          sash.setLocalPosition(0, -0.04, 0.17);
+          sash.setLocalScale(0.34, 0.08, 0.3);
+          root.addChild(sash);
+
+          const collar = new pc.Entity('mageCollar');
+          collar.addComponent('render', { type: 'cylinder', material: mageSashMat });
+          collar.setLocalPosition(0, 0.1, 0.18);
+          collar.setLocalScale(0.36, 0.07, 0.32);
+          root.addChild(collar);
+
+          const head = new pc.Entity('head');
+          head.addComponent('render', { type: 'sphere', material: skinMat });
+          head.setLocalPosition(0, 0.23, 0.18);
+          head.setLocalScale(0.32, 0.32, 0.32);
+          root.addChild(head);
+          addCuteFace(root, 0.23, 0.18, 0.96);
+
+          // Flowing chestnut hair + twin side locks
+          const hairBack = new pc.Entity('hairBack');
+          hairBack.addComponent('render', { type: 'sphere', material: mageHairMat });
+          hairBack.setLocalPosition(0, 0.2, 0.09);
+          hairBack.setLocalScale(0.38, 0.38, 0.28);
+          root.addChild(hairBack);
+
+          [-0.17, 0.17].forEach((hx) => {
+            const lock = new pc.Entity('hairLock');
+            lock.addComponent('render', { type: 'capsule', material: mageHairMat });
+            lock.setLocalPosition(hx, 0.1, 0.2);
+            lock.setLocalScale(0.11, 0.16, 0.1);
+            root.addChild(lock);
+          });
+
+          // Pointed mage hat with golden band & buckle
+          const hatBrim = new pc.Entity('hatBrim');
+          hatBrim.addComponent('render', { type: 'cylinder', material: mageRobeMat });
+          hatBrim.setLocalPosition(0, 0.34, 0.18);
+          hatBrim.setLocalScale(0.58, 0.055, 0.58);
+          root.addChild(hatBrim);
+
+          const hatBand = new pc.Entity('hatBand');
+          hatBand.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+          hatBand.setLocalPosition(0, 0.38, 0.18);
+          hatBand.setLocalScale(0.35, 0.06, 0.35);
+          root.addChild(hatBand);
+
+          const hatCone = new pc.Entity('hatCone');
+          hatCone.addComponent('render', { type: 'cone', material: mageRobeMat });
+          hatCone.setLocalPosition(-0.02, 0.52, 0.18);
+          hatCone.setLocalEulerAngles(0, 0, 10);
+          hatCone.setLocalScale(0.36, 0.4, 0.36);
+          root.addChild(hatCone);
+
+          // Ornate magic staff with golden ring & glowing fireball crystal
+          const staffArm = new pc.Entity('staffArm');
+          staffArm.setLocalPosition(0.28, -0.02, 0.26);
+
+          const staff = new pc.Entity('staff');
+          staff.addComponent('render', { type: 'cylinder', material: staffWoodMat });
+          staff.setLocalPosition(0, 0.12, 0);
+          staff.setLocalEulerAngles(0, 0, -14);
+          staff.setLocalScale(0.06, 0.88, 0.06);
+          staffArm.addChild(staff);
+
+          const staffRing = new pc.Entity('staffRing');
+          staffRing.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+          staffRing.setLocalPosition(0.08, 0.45, 0);
+          staffRing.setLocalEulerAngles(0, 0, -14);
+          staffRing.setLocalScale(0.14, 0.06, 0.14);
+          staffArm.addChild(staffRing);
+
+          const orb = new pc.Entity('staffOrb');
+          orb.addComponent('render', { type: 'sphere', material: fireballMat });
+          orb.setLocalPosition(0.11, 0.57, 0);
+          orb.setLocalScale(0.21, 0.21, 0.21);
+          staffArm.addChild(orb);
+
+          const orbCore = new pc.Entity('staffOrbCore');
+          orbCore.addComponent('render', { type: 'sphere', material: goldTrimMat });
+          orbCore.setLocalPosition(0.11, 0.57, 0.08);
+          orbCore.setLocalScale(0.1, 0.1, 0.1);
+          staffArm.addChild(orbCore);
+
+          root.addChild(staffArm);
+          root._arm = staffArm;
+        }
+        return root;
+      }
+
+      const bgStars = [];
+      const starMat = makeMaterial([0.85, 0.9, 1.0], [0.6, 0.7, 1.0], 0.9, 0.48);
+      for (let i = 0; i < 24; i++) {
+        const st = new pc.Entity('star');
+        st.addComponent('render', { type: 'sphere', material: starMat });
+        st.setPosition((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 18, -2.5 - Math.random() * 2);
+        const sc = 0.06 + Math.random() * 0.08;
+        st.setLocalScale(sc, sc, sc);
+        decorRoot.addChild(st);
+        bgStars.push({ entity: st, baseScale: sc, phase: Math.random() * Math.PI * 2 });
+      }
+
+      // Shooter Turret at Bottom Center
+      const shooterRoot = new pc.Entity('shooterRoot');
+      shooterRoot.setPosition(SHOOTER_POS.x, SHOOTER_POS.y, 0.1);
+      app.root.addChild(shooterRoot);
+
+      const turretBase = new pc.Entity('turretBase');
+      turretBase.addComponent('render', { type: 'cylinder', material: turretBaseMat });
+      turretBase.setEulerAngles(90, 0, 0);
+      turretBase.setLocalScale(1.9, 0.45, 1.9);
+      turretBase.setLocalPosition(0, 0, -0.35);
+      shooterRoot.addChild(turretBase);
+
+      const turretRing = createRuneRing('turretRing', 1.02, 12, 0.14, turretGoldMat, null);
+      turretRing.setLocalPosition(0, 0, -0.2);
+      shooterRoot.addChild(turretRing);
+
+      const turretPivot = new pc.Entity('turretPivot');
+      shooterRoot.addChild(turretPivot);
+
+      const barrel = new pc.Entity('barrel');
+      barrel.addComponent('render', { type: 'cylinder', material: turretGoldMat });
+      barrel.setLocalPosition(0, 0.82, -0.12);
+      barrel.setLocalScale(0.36, 0.85, 0.36);
+      turretPivot.addChild(barrel);
+
+      const muzzleTip = new pc.Entity('muzzleTip');
+      muzzleTip.addComponent('render', { type: 'cone', material: startPortalMat });
+      muzzleTip.setLocalPosition(0, 1.32, -0.12);
+      muzzleTip.setLocalScale(0.44, 0.3, 0.44);
+      turretPivot.addChild(muzzleTip);
+
+      // Aim guide dots
+      const AIM_DOT_COUNT = 12;
+      const aimDots = [];
+      for (let i = 0; i < AIM_DOT_COUNT; i++) {
+        const dot = new pc.Entity('aimDot');
+        dot.addComponent('render', { type: 'sphere', material: aimDotMats[0] });
+        const sz = 0.15 - i * 0.007;
+        dot.setLocalScale(sz, sz, sz);
+        dot.enabled = false;
+        app.root.addChild(dot);
+        aimDots.push(dot);
+      }
+
+      /* ============================================================
+         5. GAME STATE
+      ============================================================ */
+      const state = {
+        mode: 'start',
+        stage: 1,
+        score: 0,
+        gold: 50,
+        bestScore: 0,
+        clearedCount: 0,
+        quota: 50,
+        baseSpeed: 1.08,
+        spawnInterval: 1.0,
+        spawnQueue: [],
+        unlockedWeapons: [0, 1, 2],
+        unlockedDefenders: ['handwash'],
+        stageConfig: null,
+        selectedWeapon: 0,
+        aimAngle: Math.PI / 2,
+        aimVisible: false,
+        shootCooldown: 0,
+        turretRecoil: 0,
+        turretPopScale: 1,
+        pushbackTimer: 0,
+        elapsed: 0,
+        train: [],
+        projectiles: [],
+        particles: [],
+        defenderProjectiles: [],
+        activePickerSlotId: -1,
+        amrValue: 0,
+        amrDecayTimer: 0,
+        amrLockoutTimer: 0,
+        previewWeapon: null,
+        stopSpawning: false,
+        lastSpawnType: -1,
+        sameTypeStreak: 0
+      };
+
+      try {
+        const saved = localStorage.getItem('antimicrobial_zigzag_best');
+        if (saved) state.bestScore = parseInt(saved, 10) || 0;
+      } catch (e) {
+        state.bestScore = 0;
+      }
+
+      function saveBestScore() {
+        if (state.score > state.bestScore) {
+          state.bestScore = state.score;
+          try {
+            localStorage.setItem('antimicrobial_zigzag_best', String(state.bestScore));
+          } catch (e) {}
+        }
+      }
+
+      /* ============================================================
+         6. UI ELEMENTS & WEAPON DOCK
+      ============================================================ */
+      const uiScore = document.getElementById('ui-score');
+      const uiGold = document.getElementById('ui-gold');
+      const uiStage = document.getElementById('ui-stage');
+      const pickerGoldVal = document.getElementById('picker-gold-val');
+      const pickerWarnEl = document.getElementById('picker-warn');
+      const DEFENDER_BASE_COSTS = { handwash: 20, isolation: 20, bundle: 20 };
+      const DEFENDER_NAMES = { handwash: '洗手', isolation: '接觸隔離', bundle: '組合式照護' };
+      function getDefenderCost(kind) {
+        let count = 0;
+        for (let i = 0; i < defenseSlots.length; i++) {
+          if (defenseSlots[i].occupant && defenseSlots[i].occupant.kind === kind) {
+            count++;
+          }
+        }
+        return (DEFENDER_BASE_COSTS[kind] || 0) + count * 10;
+      }
+      const uiProgressText = document.getElementById('ui-progress-text');
+      const uiProgressFill = document.getElementById('ui-progress-fill');
+      const uiColorName = document.getElementById('ui-color-name');
+      const colorOrbsEl = document.getElementById('color-orbs');
+      const colorDockEl = document.getElementById('color-dock');
+      const dangerBannerEl = document.getElementById('danger-banner');
+      const amrGaugeEl = document.getElementById('amr-gauge');
+      const amrBarFill = document.getElementById('amr-bar-fill');
+      const amrValText = document.getElementById('amr-val-text');
+      const amrLockoutBanner = document.getElementById('amr-lockout-banner');
+      const amrLockoutTimerEl = document.getElementById('amr-lockout-timer');
+      const fxLayer = document.getElementById('fx-layer');
+
+      const weaponToast = document.getElementById('weapon-toast');
+      const weaponToastDot = document.getElementById('weapon-toast-dot');
+      const weaponToastText = document.getElementById('weapon-toast-text');
+      let toastTimer = null;
+
+      const modalStart = document.getElementById('modal-start');
+      const stageBriefBadge = document.getElementById('stage-brief-badge');
+      const stageBriefTitle = document.getElementById('stage-brief-title');
+      const stageBriefStory = document.getElementById('stage-brief-story');
+      const stageBriefPills = document.getElementById('stage-brief-pills');
+      const stageBriefPathogens = document.getElementById('stage-brief-pathogens');
+      const btnStartEl = document.getElementById('btn-start');
+      const btnReplayIntro = document.getElementById('btn-replay-intro');
+      const introOverlay = document.getElementById('intro-overlay');
+      const introCaption = document.getElementById('intro-caption');
+      const introTitleCard = document.getElementById('intro-title-card');
+      const introAlertBanner = document.getElementById('intro-alert-banner');
+      const introCenterMsg = document.getElementById('intro-center-msg');
+      const btnSkipIntro = document.getElementById('btn-skip-intro');
+      const modalDefender = document.getElementById('modal-defender');
+      const defenderSlotBadge = document.getElementById('defender-slot-badge');
+      const btnRemoveDefender = document.getElementById('btn-remove-defender');
+      const modalPause = document.getElementById('modal-pause');
+      const modalEnd = document.getElementById('modal-end');
+      const endBadge = document.getElementById('end-badge');
+      const endTitle = document.getElementById('end-title');
+      const endSub = document.getElementById('end-sub');
+      const endScore = document.getElementById('end-score');
+      const endBest = document.getElementById('end-best');
+      const btnEndPrimary = document.getElementById('btn-end-primary');
+
+
+
+      function updateHUD() {
+        uiScore.textContent = String(state.score);
+        uiGold.textContent = String(state.gold);
+        uiStage.textContent = String(state.stage);
+        const shownCleared = Math.min(state.clearedCount, state.quota);
+        uiProgressText.textContent = shownCleared + ' / ' + state.quota;
+        const pct = Math.min(100, Math.round((shownCleared / Math.max(1, state.quota)) * 100));
+        uiProgressFill.style.width = pct + '%';
+      }
+
+      function updateAmrUI() {
+        const val = Math.max(0, state.amrValue);
+        const pct = Math.min(100, (val / 20) * 100);
+        let color = '#2ee58d'; // 0-10 green
+        if (val >= 16) color = '#ff3b5c'; // 16-20 red
+        else if (val >= 11) color = '#ff9f1c'; // 11-15 orange
+
+        amrBarFill.style.height = pct + '%';
+        amrBarFill.style.backgroundColor = color;
+        amrValText.textContent = val > 20 ? '20+' : String(val);
+        amrValText.style.color = color;
+
+        const isLocked = state.amrLockoutTimer > 0;
+        amrGaugeEl.classList.toggle('danger-pulse', val >= 16 || isLocked);
+        amrLockoutBanner.classList.toggle('active', isLocked);
+        if (isLocked) {
+          amrLockoutTimerEl.textContent = state.amrLockoutTimer.toFixed(1) + ' 秒無法使用抗生素（仍可使用 Tamiflu）';
+        }
+
+        const btns = colorOrbsEl.querySelectorAll('.weapon-btn');
+        btns.forEach((btn) => {
+          const idx = parseInt(btn.dataset.weaponIndex, 10);
+          const w = WEAPONS[idx];
+          btn.classList.toggle('locked', Boolean(isLocked && w && w.isAntibiotic));
+        });
+      }
+
+      function showWeaponToast(weapon) {
+        weaponToastDot.style.background = weapon.hex;
+        const costTxt = weapon.amrCost > 0 ? '・抗藥 +' + weapon.amrCost : '・抗藥 +0';
+        weaponToastText.textContent = weapon.name + '（' + weapon.desc + costTxt + '）';
+        weaponToast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          weaponToast.classList.remove('show');
+        }, 1500);
+      }
+
+      function makeWeaponButton(idx) {
+        const w = WEAPONS[idx];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const lockedCls = (state.amrLockoutTimer > 0 && w.isAntibiotic) ? ' locked' : '';
+        btn.className = 'weapon-btn' + (idx === state.selectedWeapon ? ' active' : '') + lockedCls;
+        btn.style.setProperty('--glow-color', w.glow);
+        btn.setAttribute('aria-label', w.name);
+        btn.dataset.weaponIndex = String(idx);
+        btn.innerHTML = w.svg + '<span class="w-name">' + w.name + '</span><span class="key-badge">' + (idx + 1) + '</span>';
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (state.mode !== 'playing') return;
+          setSelectedWeapon(idx, true);
+        });
+        return btn;
+      }
+
+      function rebuildWeaponDock() {
+        colorOrbsEl.innerHTML = '';
+        const list = state.unlockedWeapons || [0, 1, 2];
+        const firstRowCount = list.length <= 4 ? list.length : 4;
+
+        const row1 = document.createElement('div');
+        row1.className = 'weapon-row-grid ' + (firstRowCount >= 4 ? 'row-4' : 'row-3');
+        for (let i = 0; i < firstRowCount; i++) {
+          row1.appendChild(makeWeaponButton(list[i]));
+        }
+        colorOrbsEl.appendChild(row1);
+
+        if (list.length > 4) {
+          const row2 = document.createElement('div');
+          row2.className = 'weapon-row-grid row-3';
+          for (let i = 4; i < list.length; i++) {
+            row2.appendChild(makeWeaponButton(list[i]));
+          }
+          colorOrbsEl.appendChild(row2);
+        }
+        updateWeaponVisuals(false);
+      }
+
+      function updateWeaponVisuals(showToast) {
+        const w = WEAPONS[state.selectedWeapon];
+        uiColorName.textContent = '目前武器：' + w.name;
+        const buttons = colorOrbsEl.querySelectorAll('.weapon-btn');
+        buttons.forEach((el) => {
+          const idx = parseInt(el.dataset.weaponIndex, 10);
+          el.classList.toggle('active', idx === state.selectedWeapon);
+        });
+
+        if (showToast) {
+          showWeaponToast(w);
+        }
+
+        if (state.previewWeapon) {
+          state.previewWeapon.destroy();
+          state.previewWeapon = null;
+        }
+        state.previewWeapon = createWeaponEntity(state.selectedWeapon, 1.05);
+        state.previewWeapon.reparent(turretPivot);
+        state.previewWeapon.setLocalPosition(0, 0.08, 0.28);
+        state.turretPopScale = 1.28;
+
+        aimDots.forEach((d) => {
+          applyMaterial(d, aimDotMats[state.selectedWeapon]);
+        });
+      }
+
+      function setSelectedWeapon(index, playSound) {
+        if (state.unlockedWeapons.indexOf(index) === -1) return;
+        const changed = index !== state.selectedWeapon;
+        state.selectedWeapon = index;
+        updateWeaponVisuals(true);
+        if (playSound && changed) SoundFX.playSwitch();
+      }
+
+      function spawnFloatingText(worldX, worldY, text, colorHex, fontSize) {
+        const screenPos = new pc.Vec3();
+        cameraEntity.camera.worldToScreen(new pc.Vec3(worldX, worldY, 0.5), screenPos);
+        const el = document.createElement('div');
+        el.className = 'float-text';
+        el.textContent = text;
+        el.style.left = screenPos.x + 'px';
+        el.style.top = screenPos.y + 'px';
+        el.style.color = colorHex || '#ffd166';
+        el.style.fontSize = (fontSize || 19) + 'px';
+        fxLayer.appendChild(el);
+        setTimeout(() => {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        }, 980);
+      }
+
+      function spawnParticles(x, y, mat, count) {
+        const n = count || 9;
+        for (let i = 0; i < n; i++) {
+          const p = new pc.Entity('particle');
+          p.addComponent('render', { type: 'sphere', material: mat });
+          const sc = 0.12 + Math.random() * 0.14;
+          p.setLocalScale(sc, sc, sc);
+          p.setPosition(x, y, 0.45);
+          app.root.addChild(p);
+          const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.45;
+          const spd = 2.4 + Math.random() * 3.6;
+          state.particles.push({
+            x, y, z: 0.45,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            vz: (Math.random() - 0.3) * 1.8,
+            life: 0.45 + Math.random() * 0.18,
+            maxLife: 0.63,
+            baseScale: sc,
+            entity: p
+          });
+        }
+      }
+
+      /* ============================================================
+         7. PATHOGEN TRAIN & ANTIMICROBIAL HIT LOGIC
+      ============================================================ */
+      function buildShuffledSpawnQueue(countsMap) {
+        const bag = [];
+        Object.keys(countsMap).forEach((k) => {
+          const id = parseInt(k, 10);
+          const cnt = countsMap[k] || 0;
+          for (let i = 0; i < cnt; i++) bag.push(id);
+        });
+        // Fisher-Yates shuffle
+        for (let i = bag.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = bag[i];
+          bag[i] = bag[j];
+          bag[j] = tmp;
+        }
+        return bag;
+      }
+
+      function populateStageBriefing(stageNum, cfg) {
+        stageBriefBadge.textContent = 'STAGE ' + stageNum + ' • 每 ' + cfg.spawnInterval.toFixed(2).replace(/\.00$/, '') + ' 秒出現 1 隻';
+        stageBriefTitle.textContent = cfg.title;
+        stageBriefStory.textContent = cfg.story;
+
+        const totalCount = Object.values(cfg.counts).reduce((a, b) => a + b, 0);
+        const defNames = cfg.defenders.map((d) => DEFENDER_NAMES[d]).join('、');
+        stageBriefPills.innerHTML =
+          '<span class="stage-pill">總病原體：' + totalCount + ' 隻</span>' +
+          '<span class="stage-pill">起始金錢：50 金</span>' +
+          '<span class="stage-pill">可用輔助：' + defNames + '</span>';
+
+        // Show appearances of all pathogens appearing in this stage (ordered cleanly)
+        const order = [2, 1, 0, 3, 4, 5, 6];
+        stageBriefPathogens.innerHTML = '';
+        order.forEach((id) => {
+          const cnt = cfg.counts[id];
+          if (!cnt) return;
+          const p = PATHOGENS[id];
+          const unlockedSet = new Set(cfg.weapons.map((wId) => WEAPONS[wId].name));
+          const drugTagsHtml = p.drugs
+            .filter((d) => {
+              const baseName = d.name.split('（')[0];
+              return unlockedSet.has(baseName);
+            })
+            .map((d) => '<span class="drug-tag' + (d.partial ? ' partial' : '') + '">' + d.name + '</span>')
+            .join('');
+
+          const row = document.createElement('div');
+          row.className = 'pathogen-row';
+          row.innerHTML =
+            '<div class="pathogen-icon">' + p.svg + '</div>' +
+            '<div class="pathogen-info">' +
+              '<div class="pathogen-head">' +
+                '<span class="pathogen-name" style="color:' + p.hex + ';">' + p.name + '</span>' +
+                '<span class="pathogen-look">' + p.look + '</span>' +
+                '<span class="pathogen-count-badge">×' + cnt + '</span>' +
+              '</div>' +
+              '<div class="drug-tags">' + drugTagsHtml + '</div>' +
+            '</div>';
+          stageBriefPathogens.appendChild(row);
+        });
+
+        btnStartEl.textContent = stageNum === 1 ? '開始遊戲' : ('開始第 ' + stageNum + ' 關');
+        btnReplayIntro.classList.toggle('hidden', stageNum !== 1);
+      }
+
+      function clearDynamicEntities() {
+        state.train.forEach((b) => b.entity.destroy());
+        state.train = [];
+        state.projectiles.forEach((p) => p.entity.destroy());
+        state.projectiles = [];
+        state.particles.forEach((pt) => pt.entity.destroy());
+        state.particles = [];
+        state.defenderProjectiles.forEach((dp) => dp.entity.destroy());
+        state.defenderProjectiles = [];
+        for (let i = 0; i < defenseSlots.length; i++) {
+          const sl = defenseSlots[i];
+          if (sl.occupant) {
+            if (sl.occupant.isolatedCres) {
+              sl.occupant.isolatedCres.forEach((c) => c.entity.destroy());
+            }
+            if (sl.occupant.entity) sl.occupant.entity.destroy();
+            sl.occupant = null;
+          }
+          sl.plusH.enabled = true;
+          sl.plusV.enabled = true;
+        }
+        fxLayer.innerHTML = '';
+        dangerBannerEl.classList.remove('active');
+      }
+
+      function initStage(stageNum, resetScore, showBriefing) {
+        clearDynamicEntities();
+        state.stage = stageNum;
+        if (resetScore) {
+          state.score = 0;
+          endlessStageCounts = null;
+        }
+        state.gold = 50;
+
+        const cfg = getStageConfig(stageNum);
+        state.stageConfig = cfg;
+        state.spawnInterval = cfg.spawnInterval;
+        // Exact movement speed so 1 pathogen emerges from s=0 every spawnInterval seconds
+        state.baseSpeed = BUBBLE_SPACING / cfg.spawnInterval;
+        state.unlockedWeapons = cfg.weapons.slice();
+        state.unlockedDefenders = cfg.defenders.slice();
+        state.spawnQueue = buildShuffledSpawnQueue(cfg.counts);
+        state.quota = state.spawnQueue.length;
+        state.clearedCount = 0;
+        state.pushbackTimer = 0;
+        state.shootCooldown = 0;
+        state.stopSpawning = false;
+        state.amrValue = 0;
+        state.amrDecayTimer = 0;
+        state.amrLockoutTimer = 0;
+
+        if (state.unlockedWeapons.indexOf(state.selectedWeapon) === -1) {
+          state.selectedWeapon = state.unlockedWeapons[0];
+        }
+
+        // Seed the first pathogen at the start portal so action begins smoothly right away
+        if (state.spawnQueue.length > 0) {
+          const firstType = state.spawnQueue.pop();
+          const entity = createPathogenEntity(firstType);
+          const pt = sampleTrack(0);
+          entity.setPosition(pt.x, pt.y, 0);
+          state.train.push({
+            type: firstType,
+            s: 0,
+            entity,
+            wobblePhase: Math.random() * Math.PI * 2,
+            scaleAnim: 0.7
+          });
+          if (state.spawnQueue.length === 0) state.stopSpawning = true;
+        }
+
+        rebuildWeaponDock();
+        updateHUD();
+        updateAmrUI();
+
+        if (showBriefing) {
+          populateStageBriefing(stageNum, cfg);
+          state.mode = 'start';
+          modalStart.classList.remove('hidden');
+        }
+      }
+
+      function releaseIsolatedCres(slot, reasonText) {
+        const occ = slot.occupant;
+        if (!occ || occ.kind !== 'isolation' || !occ.isolatedCres || occ.isolatedCres.length === 0) return;
+
+        const batch = occ.isolatedCres.splice(0, occ.isolatedCres.length);
+        const count = batch.length;
+        const baseS = Math.min(TRACK.totalLength - BUBBLE_SPACING * (count + 1), Math.max(0, slot.nearestS));
+
+        let insertIdx = state.train.length;
+        for (let i = 0; i < state.train.length; i++) {
+          if (state.train[i].s >= baseS) {
+            insertIdx = i;
+            break;
+          }
+        }
+
+        for (let i = 0; i < count; i++) {
+          const item = batch[i];
+          item.s = baseS + i * BUBBLE_SPACING;
+          item.scaleAnim = 1.24;
+          item._releasedBy = item._releasedBy || {};
+          item._releasedBy[slot.id] = true;
+          const pt = sampleTrack(item.s);
+          item.entity.setPosition(pt.x, pt.y, 0);
+          state.train.splice(insertIdx + i, 0, item);
+        }
+
+        for (let i = insertIdx + count; i < state.train.length; i++) {
+          const minS = state.train[i - 1].s + BUBBLE_SPACING;
+          if (state.train[i].s < minS) {
+            state.train[i].s = minS;
+          }
+        }
+
+        if (occ.entity && occ.entity._isoField) {
+          occ.entity._isoField.enabled = false;
+        }
+
+        SoundFX.playIsolate();
+        spawnFloatingText(slot.x, slot.y + 0.55, reasonText || ('隔離放出 CRE×' + count), '#9ad8ff', 17);
+      }
+
+      function deployDefenderToSlot(slotId, kind) {
+        const slot = defenseSlots[slotId];
+        if (!slot) return false;
+
+        if (kind) {
+          if (slot.occupant && slot.occupant.kind === kind) {
+            return true; // already deployed here, no extra charge
+          }
+          const cost = getDefenderCost(kind);
+          if (state.gold < cost) {
+            SoundFX.playMiss();
+            pickerWarnEl.textContent = '金錢不足！部署「' + DEFENDER_NAMES[kind] + '」需要 ' + cost + ' 金。';
+            return false;
+          }
+          state.gold -= cost;
+          updateHUD();
+        }
+
+        if (slot.occupant) {
+          if (slot.occupant.kind === 'isolation') {
+            releaseIsolatedCres(slot, '撤換釋放 CRE');
+          }
+          if (slot.occupant.entity) slot.occupant.entity.destroy();
+          slot.occupant = null;
+        }
+
+        if (!kind) {
+          slot.plusH.enabled = true;
+          slot.plusV.enabled = true;
+          return true;
+        }
+
+        const model = createDefenderModel(kind);
+        slot.entity.addChild(model);
+        slot.plusH.enabled = false;
+        slot.plusV.enabled = false;
+
+        slot.occupant = {
+          kind,
+          cooldown: kind === 'handwash' ? 0.8 : (kind === 'bundle' ? 1.2 : 0),
+          entity: model,
+          isolatedCres: [],
+          animTimer: 0
+        };
+
+        const paidCost = getDefenderCost(kind) - 10;
+        SoundFX.playSwitch();
+        spawnFloatingText(slot.x, slot.y + 0.55, '部署 ' + DEFENDER_NAMES[kind] + ' (-' + paidCost + '金)', '#4ef2a8', 16);
+        return true;
+      }
+
+      function openDefenderPicker(slotId) {
+        const slot = defenseSlots[slotId];
+        if (!slot) return;
+        state.activePickerSlotId = slotId;
+        state.mode = 'picking';
+        defenderSlotBadge.textContent = '防禦陣地 #' + (slotId + 1) + ' • ' + slot.label;
+        pickerGoldVal.textContent = String(state.gold);
+        pickerWarnEl.textContent = '';
+        const currentKind = slot.occupant ? slot.occupant.kind : null;
+        modalDefender.querySelectorAll('.defender-option').forEach((btn) => {
+          const kind = btn.dataset.defender;
+          const isUnlocked = state.unlockedDefenders.indexOf(kind) !== -1;
+          btn.classList.toggle('locked-stage', !isUnlocked);
+          if (!isUnlocked) return;
+          const isCur = kind === currentKind;
+          const cost = getDefenderCost(kind);
+          const costSpan = document.getElementById('cost-' + kind);
+          if (costSpan) {
+            costSpan.textContent = isCur ? '已部署' : ('🪙 ' + cost + ' 金');
+          }
+          btn.classList.toggle('current', isCur);
+          btn.classList.toggle('unaffordable', !isCur && state.gold < cost);
+        });
+        btnRemoveDefender.classList.toggle('hidden', !currentKind);
+        SoundFX.setBgmDuck(true);
+        modalDefender.classList.remove('hidden');
+      }
+
+      function closeDefenderPicker() {
+        modalDefender.classList.add('hidden');
+        state.activePickerSlotId = -1;
+        if (state.mode === 'picking') {
+          state.mode = 'playing';
+          SoundFX.setBgmDuck(false);
+        }
+      }
+
+      function isIsolatedPathogen(idx) {
+        const item = state.train[idx];
+        const leftSame = idx > 0 &&
+          state.train[idx - 1].type === item.type &&
+          (item.s - state.train[idx - 1].s) <= BUBBLE_SPACING * 1.32;
+        const rightSame = idx < state.train.length - 1 &&
+          state.train[idx + 1].type === item.type &&
+          (state.train[idx + 1].s - item.s) <= BUBBLE_SPACING * 1.32;
+        return !leftSame && !rightSame;
+      }
+
+      function pickBundleTarget(slot) {
+        // Priority: isolated CRE(6) -> ESBL(5) -> MRSA(4) -> Pseudo(3) -> Staph(1) -> E.coli(2) -> any non-isolated bacteria
+        const isolatedPriority = [6, 5, 4, 3, 1, 2];
+        const inRange = [];
+        for (let i = 0; i < state.train.length; i++) {
+          const item = state.train[i];
+          if (item.type === 0) continue; // bacteria only
+          const pt = sampleTrack(item.s);
+          const d = Math.hypot(pt.x - slot.x, pt.y - slot.y);
+          if (d <= DEFENDER_RANGE) {
+            inRange.push({ idx: i, item, isolated: isIsolatedPathogen(i) });
+          }
+        }
+        if (inRange.length === 0) return null;
+
+        for (let p = 0; p < isolatedPriority.length; p++) {
+          const t = isolatedPriority[p];
+          let best = null;
+          for (let i = 0; i < inRange.length; i++) {
+            if (inRange[i].isolated && inRange[i].item.type === t) {
+              if (!best || inRange[i].item.s > best.item.s) best = inRange[i];
+            }
+          }
+          if (best) return best.item;
+        }
+
+        let fallback = null;
+        for (let i = 0; i < inRange.length; i++) {
+          if (!inRange[i].isolated) {
+            if (!fallback || inRange[i].item.s > fallback.item.s) fallback = inRange[i];
+          }
+        }
+        return fallback ? fallback.item : null;
+      }
+
+      function launchDefenderProjectile(slot, kind, targetItem) {
+        const projEnt = new pc.Entity('defProj_' + kind);
+        const mat = kind === 'water' ? waterJetMat : fireballMat;
+        projEnt.addComponent('render', { type: 'sphere', material: mat });
+        const sc = kind === 'water' ? 0.28 : 0.34;
+        projEnt.setLocalScale(sc, sc, sc);
+        projEnt.setPosition(slot.x, slot.y, 0.35);
+        app.root.addChild(projEnt);
+
+        state.defenderProjectiles.push({
+          kind,
+          x: slot.x,
+          y: slot.y,
+          speed: kind === 'water' ? 16.5 : 14.0,
+          targetItem,
+          entity: projEnt
+        });
+
+        if (kind === 'water') SoundFX.playWater();
+        else SoundFX.playFireball();
+      }
+
+      function eliminateSingleByDefender(targetItem, kind) {
+        const idx = state.train.indexOf(targetItem);
+        if (idx === -1) return;
+        const pt = sampleTrack(targetItem.s);
+        const pInfo = PATHOGENS[targetItem.type];
+        spawnParticles(pt.x, pt.y, kind === 'water' ? waterJetMat : fireballMat, 9);
+        targetItem.entity.destroy();
+        state.train.splice(idx, 1);
+
+        state.score += 1;
+        state.gold += 1;
+        state.clearedCount += 1;
+        saveBestScore();
+        updateHUD();
+        SoundFX.playSingleKill();
+
+        const tag = kind === 'water' ? '洗手沖除' : '火球淨化';
+        spawnFloatingText(pt.x, pt.y, tag + ' +1分 +1金', kind === 'water' ? '#7ce2ff' : '#ffb74d', 16);
+
+
+      }
+
+      function handleWeaponHit(hitIdx, weaponId) {
+        const hitItem = state.train[hitIdx];
+        if (!hitItem) return;
+
+        const targetType = hitItem.type;
+        const effect = getAttackEffect(weaponId, targetType);
+        const hitPos = sampleTrack(hitItem.s);
+
+        if (effect === 'none') {
+          SoundFX.playMiss();
+          spawnParticles(hitPos.x, hitPos.y, missParticleMat, 5);
+          spawnFloatingText(hitPos.x, hitPos.y + 0.3, '無效!', '#b8c0dc', 16);
+          return;
+        }
+
+        if (effect === 'single') {
+          // Cefazolin or Ertapenem hitting Staphylococcus: kills ONLY this single hit bubble
+          spawnParticles(hitPos.x, hitPos.y, pathogenParticleMats[targetType], 9);
+          hitItem.entity.destroy();
+          state.train.splice(hitIdx, 1);
+
+          state.score += 1;
+          state.gold += 1;
+          state.clearedCount += 1;
+          saveBestScore();
+          updateHUD();
+          SoundFX.playSingleKill();
+          spawnFloatingText(hitPos.x, hitPos.y, '單顆清除 +1分 +1金', '#ff9aa8', 17);
+
+
+          return;
+        }
+
+        // effect === 'cluster': kills hit pathogen + contiguous connected pathogens of the EXACT same targetType ONLY
+        let left = hitIdx;
+        while (left > 0 && state.train[left - 1].type === targetType &&
+               (state.train[left].s - state.train[left - 1].s) <= BUBBLE_SPACING * 1.32) {
+          left--;
+        }
+        let right = hitIdx;
+        while (right < state.train.length - 1 && state.train[right + 1].type === targetType &&
+               (state.train[right + 1].s - state.train[right].s) <= BUBBLE_SPACING * 1.32) {
+          right++;
+        }
+
+        const count = right - left + 1;
+        let avgX = 0;
+        let avgY = 0;
+        for (let i = left; i <= right; i++) {
+          const p = sampleTrack(state.train[i].s);
+          avgX += p.x;
+          avgY += p.y;
+          spawnParticles(p.x, p.y, pathogenParticleMats[targetType], 9);
+          state.train[i].entity.destroy();
+        }
+        avgX /= count;
+        avgY /= count;
+
+        state.train.splice(left, count);
+
+        state.score += count;
+        state.gold += count;
+        state.clearedCount += count;
+        saveBestScore();
+        updateHUD();
+        SoundFX.playPop(count);
+
+        const pInfo = PATHOGENS[targetType];
+        const label = count >= 2
+          ? pInfo.name + ' ×' + count + ' (+' + count + '分 +' + count + '金)'
+          : pInfo.name + '清除 +1分 +1金';
+        spawnFloatingText(avgX, avgY, label, count >= 3 ? '#ffd166' : pInfo.hex, count >= 3 ? 19 : 17);
+
+        if (count >= 3) {
+          state.pushbackTimer = Math.min(1.0, state.pushbackTimer + 0.42);
+        }
+
+
+      }
+
+      /* ============================================================
+         8. AIMING, SHOOTING & INPUT (DESKTOP + MOBILE)
+      ============================================================ */
+      function screenToWorld(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const localX = clientX - rect.left;
+        const localY = clientY - rect.top;
+        const out = new pc.Vec3();
+        cameraEntity.camera.screenToWorld(localX, localY, cameraEntity.getPosition().z, out);
+        return out;
+      }
+
+      function updateAimToward(worldX, worldY) {
+        const dx = worldX - SHOOTER_POS.x;
+        const dy = Math.max(0.65, worldY - SHOOTER_POS.y);
+        let ang = Math.atan2(dy, dx);
+        const minAng = 0.21;
+        const maxAng = Math.PI - 0.21;
+        ang = Math.max(minAng, Math.min(maxAng, ang));
+        state.aimAngle = ang;
+      }
+
+      function fireWeaponToward(worldX, worldY) {
+        if (state.mode !== 'playing') return;
+        if (state.shootCooldown > 0) return;
+
+        const weapon = WEAPONS[state.selectedWeapon];
+        if (state.amrLockoutTimer > 0 && weapon.isAntibiotic) {
+          SoundFX.playMiss();
+          spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.35, '抗生素停用中 (' + Math.ceil(state.amrLockoutTimer) + 's)', '#ff6b81', 16);
+          return;
+        }
+
+        if (weapon.amrCost > 0) {
+          state.amrValue += weapon.amrCost;
+          if (state.amrValue > 20) {
+            state.amrLockoutTimer = 20.0;
+            SoundFX.startBgm('crisis');
+            SoundFX.playAmrOverload();
+            spawnFloatingText(0, 1.5, '抗生素使用過度，抗藥性失控！', '#ff3b5c', 22);
+          }
+          updateAmrUI();
+        }
+
+        updateAimToward(worldX, worldY);
+        const speed = 25.0;
+        const vx = Math.cos(state.aimAngle) * speed;
+        const vy = Math.sin(state.aimAngle) * speed;
+
+        const startX = SHOOTER_POS.x + Math.cos(state.aimAngle) * 1.15;
+        const startY = SHOOTER_POS.y + Math.sin(state.aimAngle) * 1.15;
+        const angleDeg = (state.aimAngle * 180) / Math.PI - 90;
+
+        const entity = createWeaponEntity(state.selectedWeapon, 1.0);
+        entity.setPosition(startX, startY, 0.2);
+        entity.setEulerAngles(0, 0, angleDeg);
+
+        state.projectiles.push({
+          weaponId: state.selectedWeapon,
+          x: startX,
+          y: startY,
+          vx,
+          vy,
+          angleDeg,
+          entity
+        });
+
+        state.shootCooldown = 0.17;
+        state.turretRecoil = 0.28;
+        SoundFX.playShoot();
+      }
+
+      canvas.addEventListener('pointermove', (ev) => {
+        if (state.mode !== 'playing') return;
+        const w = screenToWorld(ev.clientX, ev.clientY);
+        updateAimToward(w.x, w.y);
+        state.aimVisible = true;
+      });
+
+      canvas.addEventListener('pointerdown', (ev) => {
+        if (state.mode !== 'playing') return;
+        if (ev.button !== undefined && ev.button !== 0 && ev.pointerType === 'mouse') return;
+        SoundFX.ensure();
+        const w = screenToWorld(ev.clientX, ev.clientY);
+
+        for (let i = 0; i < defenseSlots.length; i++) {
+          const sl = defenseSlots[i];
+          if (Math.hypot(w.x - sl.x, w.y - sl.y) <= sl.radius + 0.24) {
+            openDefenderPicker(sl.id);
+            return;
+          }
+        }
+
+        state.aimVisible = true;
+        fireWeaponToward(w.x, w.y);
+      });
+
+      canvas.addEventListener('pointerleave', () => {
+        state.aimVisible = false;
+      });
+
+      // Keyboard shortcuts (1-7 direct select, Esc/P pause)
+      window.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' || ev.key === 'p' || ev.key === 'P') {
+          if (state.mode === 'picking') closeDefenderPicker();
+          else if (state.mode === 'playing') pauseGame();
+          else if (state.mode === 'paused') resumeGame();
+          return;
+        }
+        if (state.mode !== 'playing') return;
+        if (ev.key >= '1' && ev.key <= '7') {
+          setSelectedWeapon(parseInt(ev.key, 10) - 1, true);
+        }
+      });
+
+      /* ============================================================
+         9. MODAL & GAME LIFECYCLE CONTROLS
+      ============================================================ */
+      function showEndModal(isWin) {
+        state.mode = isWin ? 'stageClear' : 'gameOver';
+        SoundFX.stopBgm();
+        saveBestScore();
+        endScore.textContent = String(state.score);
+        endBest.textContent = String(state.bestScore);
+        if (isWin) {
+          endBadge.textContent = 'STAGE ' + state.stage + ' CLEAR!';
+          endTitle.textContent = '感染控制成功！';
+          endSub.textContent = '所有病原體與抗藥菌都已精準清除，準備迎接第 ' + (state.stage + 1) + ' 關！';
+          btnEndPrimary.textContent = '進入第 ' + (state.stage + 1) + ' 關';
+          SoundFX.playStageClear();
+        } else {
+          endBadge.textContent = 'GAME OVER';
+          endTitle.textContent = '病原體突破防線了';
+          endSub.textContent = '辨識金盾（MRSA / CRE）與銀盾（ESBL），快速切換對應武器再試一次吧！';
+          btnEndPrimary.textContent = '再試一次本關';
+          SoundFX.playGameOver();
+        }
+        modalEnd.classList.remove('hidden');
+      }
+
+      /* ============================================================
+         OPENING CINEMATIC ANIMATION (3 ACTS: DOCTOR -> MDR -> DEFENDERS)
+      ============================================================ */
+      function createDoctorModel() {
+        const root = new pc.Entity('introDoctor');
+
+        // Dark shoes
+        [-0.11, 0.11].forEach((bx) => {
+          const shoe = new pc.Entity('docShoe');
+          shoe.addComponent('render', { type: 'box', material: bootDarkMat });
+          shoe.setLocalPosition(bx, -0.54, 0.18);
+          shoe.setLocalScale(0.15, 0.11, 0.2);
+          root.addChild(shoe);
+        });
+
+        // White lab coat + teal scrub core
+        const coat = new pc.Entity('docCoat');
+        coat.addComponent('render', { type: 'cylinder', material: tamifluWhiteMat });
+        coat.setLocalPosition(0, -0.18, 0.15);
+        coat.setLocalScale(0.56, 0.72, 0.44);
+        root.addChild(coat);
+
+        const scrub = new pc.Entity('docScrub');
+        scrub.addComponent('render', { type: 'box', material: tealScrubMat });
+        scrub.setLocalPosition(0.06, -0.02, 0.36);
+        scrub.setLocalScale(0.2, 0.38, 0.06);
+        root.addChild(scrub);
+
+        // Coat pocket & red cross badge
+        const pocket = new pc.Entity('docPocket');
+        pocket.addComponent('render', { type: 'box', material: fireRedMat });
+        pocket.setLocalPosition(-0.12, -0.04, 0.37);
+        pocket.setLocalScale(0.1, 0.035, 0.03);
+        root.addChild(pocket);
+        const pocketV = new pc.Entity('docPocketV');
+        pocketV.addComponent('render', { type: 'box', material: fireRedMat });
+        pocketV.setLocalPosition(-0.12, -0.04, 0.37);
+        pocketV.setLocalScale(0.035, 0.1, 0.03);
+        root.addChild(pocketV);
+
+        // Stethoscope tubing around neck + silver chest piece
+        const stethNeck = new pc.Entity('stethNeck');
+        stethNeck.addComponent('render', { type: 'cylinder', material: tuxBlackMat });
+        stethNeck.setLocalPosition(0, 0.14, 0.22);
+        stethNeck.setLocalScale(0.36, 0.055, 0.32);
+        root.addChild(stethNeck);
+
+        const stethBell = new pc.Entity('stethBell');
+        stethBell.addComponent('render', { type: 'sphere', material: capMetalMat });
+        stethBell.setLocalPosition(0.14, -0.04, 0.39);
+        stethBell.setLocalScale(0.11, 0.11, 0.06);
+        root.addChild(stethBell);
+
+        // Head + expressive face + hair + reflective head mirror
+        const head = new pc.Entity('docHead');
+        head.addComponent('render', { type: 'sphere', material: skinMat });
+        head.setLocalPosition(0, 0.34, 0.16);
+        head.setLocalScale(0.42, 0.42, 0.42);
+        root.addChild(head);
+        addCuteFace(root, 0.31, 0.18, 1.12);
+
+        const hair = new pc.Entity('docHair');
+        hair.addComponent('render', { type: 'sphere', material: tuxBlackMat });
+        hair.setLocalPosition(-0.04, 0.45, 0.12);
+        hair.setLocalScale(0.45, 0.25, 0.43);
+        root.addChild(hair);
+
+        const headband = new pc.Entity('docBand');
+        headband.addComponent('render', { type: 'cylinder', material: capMetalMat });
+        headband.setLocalPosition(0, 0.43, 0.16);
+        headband.setLocalScale(0.44, 0.045, 0.44);
+        root.addChild(headband);
+
+        const lamp = new pc.Entity('docLamp');
+        lamp.addComponent('render', { type: 'cylinder', material: silverTrimMat });
+        lamp.setLocalPosition(0.14, 0.44, 0.35);
+        lamp.setLocalEulerAngles(90, 0, 0);
+        lamp.setLocalScale(0.15, 0.05, 0.15);
+        root.addChild(lamp);
+
+        // Detailed Super-Soaker Antibiotic Water Gun pointing right (+X)
+        const gunArm = new pc.Entity('docGunArm');
+        gunArm.setLocalPosition(0.28, -0.02, 0.34);
+
+        const sleeve = new pc.Entity('docSleeve');
+        sleeve.addComponent('render', { type: 'cylinder', material: tamifluWhiteMat });
+        sleeve.setLocalPosition(0.05, 0, 0);
+        sleeve.setLocalEulerAngles(0, 0, 90);
+        sleeve.setLocalScale(0.14, 0.24, 0.14);
+        gunArm.addChild(sleeve);
+
+        const gunBody = new pc.Entity('gunBody');
+        gunBody.addComponent('render', { type: 'box', material: hoseBlueMat });
+        gunBody.setLocalPosition(0.32, 0, 0);
+        gunBody.setLocalScale(0.58, 0.2, 0.18);
+        gunArm.addChild(gunBody);
+
+        const gunGrip = new pc.Entity('gunGrip');
+        gunGrip.addComponent('render', { type: 'box', material: tamifluYellowMat });
+        gunGrip.setLocalPosition(0.16, -0.14, 0);
+        gunGrip.setLocalEulerAngles(0, 0, 15);
+        gunGrip.setLocalScale(0.11, 0.2, 0.12);
+        gunArm.addChild(gunGrip);
+
+        const gunTank = new pc.Entity('gunTank');
+        gunTank.addComponent('render', { type: 'cylinder', material: visorGlassMat });
+        gunTank.setLocalPosition(0.24, 0.18, 0);
+        gunTank.setLocalEulerAngles(0, 0, 90);
+        gunTank.setLocalScale(0.2, 0.42, 0.2);
+        gunArm.addChild(gunTank);
+
+        const gunNozzle = new pc.Entity('gunNozzle');
+        gunNozzle.addComponent('render', { type: 'cone', material: goldTrimMat });
+        gunNozzle.setLocalPosition(0.66, 0, 0);
+        gunNozzle.setLocalEulerAngles(0, 0, -90);
+        gunNozzle.setLocalScale(0.16, 0.2, 0.16);
+        gunArm.addChild(gunNozzle);
+
+        root.addChild(gunArm);
+        root._gunArm = gunArm;
+        return root;
+      }
+
+      const introState = {
+        time: 0,
+        act: 0,
+        root: null,
+        doctor: null,
+        conductor: null,
+        barrierWall: null,
+        firefighter: null,
+        mage: null,
+        regularBugs: [],   // { type, x, y, speed, entity }
+        mdrBugs: [],       // { type, x, y, speed, entity, alive }
+        docShots: [],      // { x, y, vx, vy, entity }
+        heroShots: [],     // { kind, x, y, speed, target, entity }
+        docFireTimer: 0,
+        bugSpawnTimer: 0,
+        heroFireTimer: 0
+      };
+
+      function cleanupIntro() {
+        if (introState.root) {
+          introState.root.destroy();
+          introState.root = null;
+        }
+        introState.doctor = null;
+        introState.conductor = null;
+        introState.barrierWall = null;
+        introState.firefighter = null;
+        introState.mage = null;
+        introState.regularBugs = [];
+        introState.mdrBugs = [];
+        introState.docShots = [];
+        introState.heroShots = [];
+        introState.act = 0;
+
+        // Restore main battlefield entities
+        decorRoot.enabled = true;
+        shooterRoot.enabled = true;
+
+        introAlertBanner.classList.remove('show');
+        introCenterMsg.classList.remove('show', 'theme-bundle');
+        introTitleCard.classList.remove('show');
+        introOverlay.classList.add('hidden');
+        cameraEntity.setPosition(0, 0.15, 20);
+        cameraEntity.camera.orthoHeight = baseOrthoHeight;
+        state.amrValue = 0;
+        state.amrLockoutTimer = 0;
+        updateAmrUI();
+      }
+
+      function finishIntro() {
+        SoundFX.stopBgm();
+        cleanupIntro();
+        initStage(1, true, true);
+      }
+
+      function startIntro() {
+        cleanupIntro();
+        clearDynamicEntities();
+        modalStart.classList.add('hidden');
+        modalPause.classList.add('hidden');
+        modalDefender.classList.add('hidden');
+        modalEnd.classList.add('hidden');
+
+        // Hide main zigzag battlefield so the 3-act theater plays on a clean stage
+        decorRoot.enabled = false;
+        shooterRoot.enabled = false;
+
+        state.mode = 'intro';
+        introState.time = 0;
+        introState.act = 1;
+        introState.docFireTimer = 0.08;
+        introState.bugSpawnTimer = 0.05;
+        introState.heroFireTimer = 0.1;
+
+        const root = new pc.Entity('introRoot');
+        app.root.addChild(root);
+        introState.root = root;
+
+        // Subtle horizontal floor guide line
+        for (let i = -5; i <= 5; i++) {
+          const tile = new pc.Entity('stageTile');
+          tile.addComponent('render', { type: 'sphere', material: trackBeadMat });
+          tile.setPosition(i * 1.0, -3.1, -0.8);
+          tile.setLocalScale(0.14, 0.14, 0.14);
+          root.addChild(tile);
+        }
+
+        // Doctor standing on the left holding the antibiotic water gun
+        const doc = createDoctorModel();
+        root.addChild(doc);
+        doc.setPosition(-3.85, 0.0, 0.3);
+        doc.setLocalScale(1.32, 1.32, 1.32);
+        introState.doctor = doc;
+
+        // Seed 3 initial regular bacteria on the right marching left
+        const initRows = [
+          { type: 2, x: 2.2, y: 0.9 },
+          { type: 1, x: 3.6, y: -0.4 },
+          { type: 3, x: 4.8, y: 0.2 }
+        ];
+        initRows.forEach((b) => {
+          const ent = createPathogenEntity(b.type);
+          ent.reparent(root);
+          ent.setPosition(b.x, b.y, 0.2);
+          ent.setLocalScale(1.08, 1.08, 1.08);
+          introState.regularBugs.push({ type: b.type, x: b.x, y: b.y, speed: 1.9, entity: ent });
+        });
+
+        cameraEntity.setPosition(0, 0.15, 20);
+        cameraEntity.camera.orthoHeight = baseOrthoHeight * 0.88;
+
+        introCaption.textContent = '醫師使用水槍噴射抗生素，消滅從右側湧入的細菌！';
+        introAlertBanner.classList.remove('show');
+        introCenterMsg.classList.remove('show', 'theme-bundle');
+        introTitleCard.classList.remove('show');
+        introOverlay.classList.remove('hidden');
+        SoundFX.startBgm('intro');
+        SoundFX.setBgmDuck(false);
+        SoundFX.playSwitch();
+      }
+
+      function spawnIntroDocShot(root, targetY) {
+        const shot = new pc.Entity('docAbxShot');
+        shot.addComponent('render', { type: 'sphere', material: waterJetMat });
+        shot.setLocalScale(0.24, 0.18, 0.22);
+        const sx = -2.85;
+        const sy = 0.0;
+        shot.setPosition(sx, sy, 0.45);
+        root.addChild(shot);
+        const dy = (targetY !== undefined ? targetY : (Math.random() - 0.5) * 1.6) - sy;
+        const dx = 6.2;
+        const len = Math.hypot(dx, dy) || 1;
+        const spd = 13.5;
+        introState.docShots.push({ x: sx, y: sy, vx: (dx / len) * spd, vy: (dy / len) * spd, entity: shot });
+        SoundFX.playShoot();
+      }
+
+      function updateIntro(dt) {
+        introState.time += dt;
+        const t = introState.time;
+        const root = introState.root;
+        if (!root) return;
+
+        // Animate doctor gun recoil
+        if (introState.doctor && introState.doctor._gunArm) {
+          const recoil = t < 5.6 ? Math.sin(t * 24) * 0.07 : 0;
+          introState.doctor._gunArm.setLocalPosition(0.28 - recoil, -0.02, 0.34);
+        }
+
+        // ============================================================
+        // ACT 1 (0.0s - 3.0s): Regular bacteria right->left, Doctor sprays & kills them
+        // ============================================================
+        if (t < 3.0) {
+          introState.bugSpawnTimer -= dt;
+          if (introState.bugSpawnTimer <= 0) {
+            const regPool = [2, 1, 3]; // E.coli, Staph, Pseudomonas
+            const bType = regPool[Math.floor(Math.random() * regPool.length)];
+            const by = (Math.random() - 0.5) * 3.0;
+            const ent = createPathogenEntity(bType);
+            ent.reparent(root);
+            ent.setPosition(5.2, by, 0.2);
+            ent.setLocalScale(1.08, 1.08, 1.08);
+            introState.regularBugs.push({ type: bType, x: 5.2, y: by, speed: 2.05, entity: ent });
+            introState.bugSpawnTimer = 0.42;
+          }
+
+          introState.docFireTimer -= dt;
+          if (introState.docFireTimer <= 0) {
+            // Aim at the leftmost regular bug
+            let targetY = 0;
+            let leftmost = null;
+            for (let i = 0; i < introState.regularBugs.length; i++) {
+              const b = introState.regularBugs[i];
+              if (!leftmost || b.x < leftmost.x) leftmost = b;
+            }
+            if (leftmost) targetY = leftmost.y;
+            spawnIntroDocShot(root, targetY);
+            introState.docFireTimer = 0.24;
+            // Climb AMR gauge steadily during Act 1
+            state.amrValue = Math.min(20, state.amrValue + 2);
+            updateAmrUI();
+          }
+        }
+
+        // Move regular bacteria leftward
+        for (let i = introState.regularBugs.length - 1; i >= 0; i--) {
+          const b = introState.regularBugs[i];
+          b.x -= b.speed * dt;
+          b.entity.setPosition(b.x, b.y, 0.2);
+          if (b.entity._visual) b.entity._visual.rotate(0, 0, dt * 40);
+          if (b.x < -5.5) {
+            b.entity.destroy();
+            introState.regularBugs.splice(i, 1);
+          }
+        }
+
+        // ============================================================
+        // ACT 2 (3.0s - 5.6s): 「抗生素使用過量，抗藥性失控」+ Wave of ESBL, MRSA, CRE
+        // ============================================================
+        if (t >= 3.0 && introState.act < 2) {
+          introState.act = 2;
+          // Clear any leftover regular bacteria
+          introState.regularBugs.forEach((b) => b.entity.destroy());
+          introState.regularBugs = [];
+
+          state.amrValue = 22;
+          updateAmrUI();
+          introAlertBanner.classList.add('show');
+          introCaption.textContent = '抗生素使用過量，抗藥性失控！大量 ESBL、MRSA、CRE 襲來，醫師攻擊無效！';
+          SoundFX.playAmrOverload();
+
+          // Spawn a dense army of ESBL (5), MRSA (4), CRE (6) from the right
+          const mdrWave = [
+            { type: 4, x: 3.2, y: 1.5 },  { type: 5, x: 3.4, y: 0.0 },  { type: 6, x: 3.2, y: -1.5 },
+            { type: 5, x: 4.5, y: 2.1 },  { type: 6, x: 4.6, y: 0.7 },  { type: 4, x: 4.6, y: -0.8 }, { type: 5, x: 4.5, y: -2.1 },
+            { type: 6, x: 5.8, y: 1.4 },  { type: 4, x: 5.9, y: 0.0 },  { type: 5, x: 5.8, y: -1.4 }
+          ];
+          mdrWave.forEach((m) => {
+            const ent = createPathogenEntity(m.type);
+            ent.reparent(root);
+            ent.setPosition(m.x, m.y, 0.25);
+            ent.setLocalScale(1.12, 1.12, 1.12);
+            introState.mdrBugs.push({ type: m.type, x: m.x, y: m.y, speed: 1.55, entity: ent, alive: true });
+          });
+        }
+
+        if (t >= 3.0 && t < 5.6) {
+          // Doctor desperately keeps firing, but shots bounce off MDR shields harmlessly!
+          introState.docFireTimer -= dt;
+          if (introState.docFireTimer <= 0) {
+            const aliveMdr = introState.mdrBugs.filter((m) => m.alive);
+            const target = aliveMdr.length ? aliveMdr[Math.floor(Math.random() * aliveMdr.length)] : null;
+            spawnIntroDocShot(root, target ? target.y : 0);
+            introState.docFireTimer = 0.26;
+          }
+        }
+
+        // Move MDR army leftward (halted once Conductor raises the Isolation Barrier in Act 3!)
+        const barrierStopX = -0.35;
+        for (let i = 0; i < introState.mdrBugs.length; i++) {
+          const m = introState.mdrBugs[i];
+          if (!m.alive) continue;
+          if (introState.act < 3) {
+            m.x = Math.max(barrierStopX + 0.2, m.x - m.speed * dt);
+          } else if (m.x > barrierStopX + 0.15) {
+            // Stop smoothly right at the isolation barrier line
+            m.x = Math.max(barrierStopX + 0.15, m.x - m.speed * 0.45 * dt);
+          }
+          m.entity.setPosition(m.x, m.y, 0.25);
+          if (m.entity._shield) m.entity._shield.setLocalEulerAngles(0, Math.sin(t * 7 + i) * 10, 0);
+          if (m.entity._creAura) m.entity._creAura.rotate(0, 0, dt * 110);
+        }
+
+        // Update Doctor's antibiotic shots (kill regular bugs in Act 1; bounce off MDR in Act 2!)
+        for (let i = introState.docShots.length - 1; i >= 0; i--) {
+          const sh = introState.docShots[i];
+          sh.x += sh.vx * dt;
+          sh.y += sh.vy * dt;
+          sh.entity.setPosition(sh.x, sh.y, 0.45);
+
+          let removed = false;
+          // Check hit vs regular bacteria
+          for (let j = introState.regularBugs.length - 1; j >= 0; j--) {
+            const b = introState.regularBugs[j];
+            if (Math.hypot(sh.x - b.x, sh.y - b.y) < 0.72) {
+              spawnParticles(b.x, b.y, pathogenParticleMats[b.type], 8);
+              b.entity.destroy();
+              introState.regularBugs.splice(j, 1);
+              sh.entity.destroy();
+              introState.docShots.splice(i, 1);
+              SoundFX.playPop(2);
+              removed = true;
+              break;
+            }
+          }
+          if (removed) continue;
+
+          // Check hit vs MDR bacteria -> INEFFECTIVE!
+          for (let j = 0; j < introState.mdrBugs.length; j++) {
+            const m = introState.mdrBugs[j];
+            if (!m.alive) continue;
+            if (Math.hypot(sh.x - m.x, sh.y - m.y) < 0.75) {
+              spawnParticles(sh.x, sh.y, missParticleMat, 4);
+              spawnFloatingText(m.x - 0.3, m.y + 0.45, '無效!', '#b8c0dc', 14);
+              sh.entity.destroy();
+              introState.docShots.splice(i, 1);
+              SoundFX.playShieldBounce();
+              removed = true;
+              break;
+            }
+          }
+          if (removed) continue;
+
+          if (sh.x > 6.2 || Math.abs(sh.y) > 6.5) {
+            sh.entity.destroy();
+            introState.docShots.splice(i, 1);
+          }
+        }
+
+        // ============================================================
+        // ACT 3A (5.6s - 7.3s): Conductor appears & halts MDR with Isolation Barrier
+        // ============================================================
+        if (t >= 5.6 && introState.act < 3) {
+          introState.act = 3;
+          introAlertBanner.classList.remove('show');
+          introCaption.textContent = '指揮家發動接觸隔離！';
+          introCenterMsg.textContent = '接觸隔離阻止抗藥性細菌傳播';
+          introCenterMsg.classList.remove('theme-bundle');
+          introCenterMsg.classList.add('show');
+
+          // Clear remaining doctor shots
+          introState.docShots.forEach((sh) => sh.entity.destroy());
+          introState.docShots = [];
+
+          // Conductor steps forward
+          const cond = createDefenderModel('isolation');
+          root.addChild(cond);
+          cond.setPosition(-1.55, 0.0, 0.35);
+          cond.setLocalScale(1.35, 1.35, 1.35);
+          if (cond._isoField) cond._isoField.enabled = true;
+          introState.conductor = cond;
+
+          // Vertical glowing Isolation Barrier Wall stopping the MDR advance
+          const wall = new pc.Entity('introBarrierWall');
+          wall.addComponent('render', { type: 'box', material: isolateFieldMat });
+          wall.setPosition(-0.55, 0.0, 0.3);
+          wall.setLocalScale(0.18, 5.6, 0.35);
+          root.addChild(wall);
+          introState.barrierWall = wall;
+
+          spawnParticles(-0.55, 0.0, slotRingMat, 12);
+          SoundFX.playIsolate();
+        }
+
+        if (introState.conductor && introState.conductor._arm) {
+          introState.conductor._arm.setLocalEulerAngles(0, 0, Math.sin(t * 9) * 24);
+        }
+        if (introState.barrierWall) {
+          const pulse = 0.92 + 0.1 * Math.sin(t * 8);
+          introState.barrierWall.setLocalScale(0.18 * pulse, 5.6, 0.35);
+        }
+
+        // ============================================================
+        // ACT 3B (7.3s - 9.7s): Firefighter & Mage appear and wipe out MDR!
+        // ============================================================
+        if (t >= 7.3 && introState.act < 4) {
+          introState.act = 4;
+          introCaption.textContent = '消防員與魔法師全面反擊！';
+          introCenterMsg.classList.remove('show');
+          void introCenterMsg.offsetWidth;
+          introCenterMsg.textContent = '洗手跟組合式照顧阻止院內感染';
+          introCenterMsg.classList.add('theme-bundle', 'show');
+
+          const ff = createDefenderModel('handwash');
+          root.addChild(ff);
+          ff.setPosition(-2.25, 2.0, 0.35);
+          ff.setLocalScale(1.32, 1.32, 1.32);
+          introState.firefighter = ff;
+          spawnParticles(-2.25, 2.0, waterJetMat, 8);
+
+          const mage = createDefenderModel('bundle');
+          root.addChild(mage);
+          mage.setPosition(-2.25, -2.0, 0.35);
+          mage.setLocalScale(1.32, 1.32, 1.32);
+          introState.mage = mage;
+          spawnParticles(-2.25, -2.0, fireballMat, 8);
+
+          introState.heroFireTimer = 0.05;
+        }
+
+        if (t >= 7.3 && t < 9.8) {
+          if (introState.firefighter && introState.firefighter._arm) {
+            introState.firefighter._arm.setLocalEulerAngles(0, 0, Math.sin(t * 10) * 14);
+          }
+          if (introState.mage && introState.mage._arm) {
+            introState.mage._arm.setLocalEulerAngles(0, 0, Math.sin(t * 10 + 1.5) * 14);
+          }
+
+          // Smoothly cool AMR gauge back down to green
+          const coolF = Math.min(1, (t - 7.3) / 1.8);
+          state.amrValue = Math.max(0, Math.round(22 * (1 - coolF)));
+          updateAmrUI();
+
+          // Rapidly fire alternating Water Jets (Firefighter) & Fireballs (Mage) at MDR bugs
+          introState.heroFireTimer -= dt;
+          if (introState.heroFireTimer <= 0) {
+            const targets = introState.mdrBugs.filter((m) => m.alive && !m._targeted);
+            if (targets.length > 0) {
+              // Fire one water jet and one fireball simultaneously!
+              const t1 = targets[0];
+              t1._targeted = true;
+              const p1 = new pc.Entity('introWater');
+              p1.addComponent('render', { type: 'sphere', material: waterJetMat });
+              p1.setLocalScale(0.32, 0.32, 0.32);
+              p1.setPosition(-1.85, 2.0, 0.5);
+              root.addChild(p1);
+              introState.heroShots.push({ kind: 'water', x: -1.85, y: 2.0, speed: 15.0, target: t1, entity: p1 });
+              SoundFX.playWater();
+
+              if (targets.length > 1) {
+                const t2 = targets[1];
+                t2._targeted = true;
+                const p2 = new pc.Entity('introFire');
+                p2.addComponent('render', { type: 'sphere', material: fireballMat });
+                p2.setLocalScale(0.36, 0.36, 0.36);
+                p2.setPosition(-1.85, -2.0, 0.5);
+                root.addChild(p2);
+                introState.heroShots.push({ kind: 'fireball', x: -1.85, y: -2.0, speed: 14.5, target: t2, entity: p2 });
+                SoundFX.playFireball();
+              }
+            }
+            introState.heroFireTimer = 0.28;
+          }
+        }
+
+        // Update Firefighter water jets & Mage fireballs
+        for (let i = introState.heroShots.length - 1; i >= 0; i--) {
+          const hs = introState.heroShots[i];
+          if (!hs.target || !hs.target.alive) {
+            hs.entity.destroy();
+            introState.heroShots.splice(i, 1);
+            continue;
+          }
+          const dx = hs.target.x - hs.x;
+          const dy = hs.target.y - hs.y;
+          const dist = Math.hypot(dx, dy);
+          const step = hs.speed * dt;
+          if (dist <= step + 0.4) {
+            hs.target.alive = false;
+            spawnParticles(hs.target.x, hs.target.y, hs.kind === 'water' ? waterJetMat : fireballMat, 11);
+            hs.target.entity.destroy();
+            hs.entity.destroy();
+            introState.heroShots.splice(i, 1);
+            SoundFX.playPop(3);
+          } else {
+            hs.x += (dx / dist) * step;
+            hs.y += (dy / dist) * step;
+            hs.entity.setPosition(hs.x, hs.y, 0.5);
+          }
+        }
+
+        // ============================================================
+        // FINALE (9.7s - 11.4s): Title Card「微生物防治大作戰」-> Stage 1
+        // ============================================================
+        if (t >= 9.7 && introState.act < 5) {
+          introState.act = 5;
+          introCenterMsg.classList.remove('show', 'theme-bundle');
+          // Clean up any remaining MDR bugs with a final burst
+          introState.mdrBugs.forEach((m) => {
+            if (m.alive) {
+              m.alive = false;
+              spawnParticles(m.x, m.y, goldTrimMat, 10);
+              m.entity.destroy();
+            }
+          });
+          introTitleCard.classList.add('show');
+          SoundFX.playStageClear();
+        }
+
+        if (t >= 11.5) {
+          finishIntro();
+        }
+      }
+
+      function beginPreparedStage() {
+        SoundFX.ensure();
+        modalStart.classList.add('hidden');
+        modalPause.classList.add('hidden');
+        modalDefender.classList.add('hidden');
+        modalEnd.classList.add('hidden');
+        state.mode = 'playing';
+        SoundFX.startBgm('battle');
+        SoundFX.setBgmDuck(false);
+        showWeaponToast(WEAPONS[state.selectedWeapon]);
+      }
+
+      function restartFromStageOne() {
+        SoundFX.ensure();
+        modalPause.classList.add('hidden');
+        modalDefender.classList.add('hidden');
+        modalEnd.classList.add('hidden');
+        initStage(1, true, true);
+      }
+
+      function pauseGame() {
+        if (state.mode !== 'playing') return;
+        state.mode = 'paused';
+        SoundFX.setBgmDuck(true);
+        modalPause.classList.remove('hidden');
+      }
+
+      function resumeGame() {
+        if (state.mode !== 'paused') return;
+        modalPause.classList.add('hidden');
+        state.mode = 'playing';
+        SoundFX.setBgmDuck(false);
+      }
+
+      document.getElementById('btn-start').addEventListener('click', beginPreparedStage);
+      ['btn-deploy-handwash', 'btn-deploy-isolation', 'btn-deploy-bundle'].forEach((id) => {
+        document.getElementById(id).addEventListener('click', (ev) => {
+          const kind = ev.currentTarget.dataset.defender;
+          if (state.activePickerSlotId >= 0) {
+            const ok = deployDefenderToSlot(state.activePickerSlotId, kind);
+            if (ok) closeDefenderPicker();
+          }
+        });
+      });
+      btnRemoveDefender.addEventListener('click', () => {
+        if (state.activePickerSlotId >= 0) {
+          deployDefenderToSlot(state.activePickerSlotId, null);
+        }
+        closeDefenderPicker();
+      });
+      document.getElementById('btn-cancel-defender').addEventListener('click', closeDefenderPicker);
+      btnSkipIntro.addEventListener('click', () => {
+        SoundFX.ensure();
+        finishIntro();
+      });
+      btnReplayIntro.addEventListener('click', () => {
+        SoundFX.ensure();
+        startIntro();
+      });
+      document.getElementById('btn-pause').addEventListener('click', () => {
+        if (state.mode === 'playing') pauseGame();
+        else if (state.mode === 'paused') resumeGame();
+      });
+      document.getElementById('btn-resume').addEventListener('click', resumeGame);
+      document.getElementById('btn-restart-pause').addEventListener('click', restartFromStageOne);
+
+      btnEndPrimary.addEventListener('click', () => {
+        modalEnd.classList.add('hidden');
+        if (state.mode === 'stageClear') {
+          initStage(state.stage + 1, false, true);
+        } else {
+          initStage(state.stage, false, true);
+        }
+      });
+
+      document.getElementById('btn-end-restart').addEventListener('click', restartFromStageOne);
+
+      const btnMute = document.getElementById('btn-mute');
+      btnMute.addEventListener('click', () => {
+        SoundFX.ensure();
+        SoundFX.setMuted(!SoundFX.muted);
+        btnMute.textContent = SoundFX.muted ? '🔇' : '🔊';
+      });
+
+      // Unlock Web Audio cleanly on the user's first gesture anywhere on the page
+      ['pointerdown', 'keydown'].forEach((evtName) => {
+        window.addEventListener(evtName, () => {
+          SoundFX.ensure();
+        }, { once: true, passive: true });
+      });
+
+      /* ============================================================
+         10. RESPONSIVE CANVAS & CAMERA SIZING
+      ============================================================ */
+      let baseOrthoHeight = 9.2;
+      function handleResize() {
+        const w = Math.max(1, canvasWrap.clientWidth);
+        const h = Math.max(1, canvasWrap.clientHeight);
+        app.resizeCanvas(w, h);
+        const aspect = w / h;
+        const minOrthoForHeight = 8.9;
+        const minOrthoForWidth = 5.75 / Math.max(0.35, aspect);
+        baseOrthoHeight = Math.max(minOrthoForHeight, minOrthoForWidth);
+        if (state.mode !== 'intro') {
+          cameraEntity.camera.orthoHeight = baseOrthoHeight;
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', () => setTimeout(handleResize, 120));
+
+      /* ============================================================
+         11. MAIN PLAYCANVAS UPDATE LOOP
+      ============================================================ */
+      app.on('update', (dt) => {
+        const safeDt = Math.min(0.05, dt);
+        state.elapsed += safeDt;
+
+        // Ambient portal, turret ring & star animations
+        startPortal.rotate(0, 0, safeDt * 65);
+        endPortal.rotate(0, 0, -safeDt * 90);
+        turretRing.rotate(0, 0, safeDt * 24);
+        for (let i = 0; i < defenseSlots.length; i++) {
+          const sl = defenseSlots[i];
+          sl.ringEntity.rotate(0, 0, safeDt * 18);
+          const sp = 0.96 + 0.05 * Math.sin(state.elapsed * 2.4 + sl.phase);
+          sl.ringEntity.setLocalScale(sp, sp, 1);
+        }
+        for (let i = 0; i < bgStars.length; i++) {
+          const st = bgStars[i];
+          const pulse = 0.72 + 0.35 * Math.sin(state.elapsed * 2.2 + st.phase);
+          const sc = st.baseScale * pulse;
+          st.entity.setLocalScale(sc, sc, sc);
+        }
+
+        // Turret rotation & recoil spring
+        const deg = (state.aimAngle * 180) / Math.PI - 90;
+        turretPivot.setEulerAngles(0, 0, deg);
+        if (state.turretRecoil > 0) {
+          state.turretRecoil = Math.max(0, state.turretRecoil - safeDt * 2.4);
+        }
+        turretPivot.setLocalPosition(
+          -Math.cos(state.aimAngle) * state.turretRecoil,
+          -Math.sin(state.aimAngle) * state.turretRecoil,
+          0
+        );
+        if (state.turretPopScale > 1.0) {
+          state.turretPopScale = Math.max(1.0, state.turretPopScale - safeDt * 2.8);
+          if (state.previewWeapon) {
+            state.previewWeapon.setLocalScale(state.turretPopScale, state.turretPopScale, state.turretPopScale);
+          }
+        }
+
+        // Aim guide dots
+        const showAim = state.mode === 'playing' && state.aimVisible;
+        for (let i = 0; i < aimDots.length; i++) {
+          const dot = aimDots[i];
+          dot.enabled = showAim;
+          if (showAim) {
+            const dist = 1.6 + i * 0.78 + ((state.elapsed * 2.2) % 0.78);
+            let px = SHOOTER_POS.x + Math.cos(state.aimAngle) * dist;
+            let py = SHOOTER_POS.y + Math.sin(state.aimAngle) * dist;
+            if (px > PLAYFIELD_HALF_W) px = PLAYFIELD_HALF_W - (px - PLAYFIELD_HALF_W);
+            else if (px < -PLAYFIELD_HALF_W) px = -PLAYFIELD_HALF_W - (px + PLAYFIELD_HALF_W);
+            dot.setPosition(px, py, 0.2);
+          }
+        }
+
+        // Update particles
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const pt = state.particles[i];
+          pt.life -= safeDt;
+          if (pt.life <= 0) {
+            pt.entity.destroy();
+            state.particles.splice(i, 1);
+          } else {
+            pt.x += pt.vx * safeDt;
+            pt.y += pt.vy * safeDt;
+            pt.vy -= 5.2 * safeDt;
+            pt.z += pt.vz * safeDt;
+            pt.entity.setPosition(pt.x, pt.y, pt.z);
+            const r = Math.max(0.01, pt.life / pt.maxLife);
+            const sc = pt.baseScale * r;
+            pt.entity.setLocalScale(sc, sc, sc);
+          }
+        }
+
+        if (state.mode === 'intro') {
+          updateIntro(safeDt);
+          return;
+        }
+
+        if (state.mode !== 'playing') return;
+
+        if (state.shootCooldown > 0) {
+          state.shootCooldown = Math.max(0, state.shootCooldown - safeDt);
+        }
+
+        // --- AMR Pressure Decay (every 1.5s -1) & 20s Lockout Countdown ---
+        let amrChanged = false;
+        if (state.amrLockoutTimer > 0) {
+          state.amrLockoutTimer = Math.max(0, state.amrLockoutTimer - safeDt);
+          amrChanged = true;
+          if (state.amrLockoutTimer === 0) {
+            state.amrValue = Math.min(state.amrValue, 10);
+            SoundFX.startBgm('battle');
+            spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.4, '抗生素已恢復使用！', '#4ef2a8', 17);
+          }
+        }
+        if (state.amrValue > 0) {
+          state.amrDecayTimer += safeDt;
+          while (state.amrDecayTimer >= 1.0 && state.amrValue > 0) {
+            state.amrDecayTimer -= 1.0;
+            state.amrValue = Math.max(0, state.amrValue - 1);
+            amrChanged = true;
+          }
+        } else {
+          state.amrDecayTimer = 0;
+        }
+        if (amrChanged) {
+          updateAmrUI();
+        }
+
+        // --- Pathogen Spawning (Exact Queue) & Movement ---
+        if (!state.stopSpawning) {
+          if (state.spawnQueue.length > 0 && (state.train.length === 0 || state.train[0].s >= BUBBLE_SPACING)) {
+            const type = state.spawnQueue.pop();
+            const entity = createPathogenEntity(type);
+            const pt = sampleTrack(0);
+            entity.setPosition(pt.x, pt.y, 0);
+            state.train.unshift({
+              type,
+              s: 0,
+              entity,
+              wobblePhase: Math.random() * Math.PI * 2,
+              scaleAnim: 0.65
+            });
+            if (state.spawnQueue.length === 0) {
+              state.stopSpawning = true;
+            }
+          } else if (state.spawnQueue.length === 0) {
+            state.stopSpawning = true;
+          }
+        }
+
+        if (state.train.length > 0) {
+          if (state.pushbackTimer > 0) {
+            state.pushbackTimer = Math.max(0, state.pushbackTimer - safeDt);
+            const backDelta = 2.4 * safeDt;
+            for (let i = 0; i < state.train.length; i++) {
+              state.train[i].s = Math.max(i * BUBBLE_SPACING, state.train[i].s - backDelta);
+            }
+          } else {
+            state.train[0].s += state.baseSpeed * safeDt;
+            for (let i = 1; i < state.train.length; i++) {
+              const prev = state.train[i - 1];
+              const cur = state.train[i];
+              const gap = cur.s - prev.s;
+              if (gap < BUBBLE_SPACING) {
+                cur.s = prev.s + BUBBLE_SPACING;
+              } else if (gap > BUBBLE_SPACING + 0.04 && prev.type === cur.type) {
+                const pull = Math.min(gap - BUBBLE_SPACING, 4.2 * safeDt);
+                let segEnd = i;
+                while (segEnd < state.train.length - 1 &&
+                       (state.train[segEnd + 1].s - state.train[segEnd].s) <= BUBBLE_SPACING + 0.06) {
+                  segEnd++;
+                }
+                for (let k = i; k <= segEnd; k++) {
+                  state.train[k].s -= pull;
+                }
+              }
+            }
+          }
+
+          // Update 3D pathogen transforms & animations
+          for (let i = 0; i < state.train.length; i++) {
+            const b = state.train[i];
+            const pt = sampleTrack(b.s);
+            b.entity.setPosition(pt.x, pt.y, 0);
+            if (b.scaleAnim !== 1.0) {
+              b.scaleAnim += (1.0 - b.scaleAnim) * Math.min(1, safeDt * 12);
+              if (Math.abs(b.scaleAnim - 1.0) < 0.005) b.scaleAnim = 1.0;
+            }
+            const wob = Math.sin(state.elapsed * 4.5 + b.wobblePhase) * 0.04;
+            b.entity.setLocalScale(b.scaleAnim * (1 + wob), b.scaleAnim * (1 - wob), b.scaleAnim);
+            if (b.entity._visual) {
+              if (b.type === 0) {
+                b.entity._visual.rotate(safeDt * 18, safeDt * 32, safeDt * 12);
+              } else if (b.type === 1 || b.type === 4) {
+                b.entity._visual.rotate(0, 0, safeDt * 22);
+              } else {
+                const rock = Math.sin(state.elapsed * 4.0 + b.wobblePhase) * 12;
+                b.entity._visual.setLocalEulerAngles(0, 0, rock);
+              }
+            }
+            if (b.entity._shield) {
+              const tilt = Math.sin(state.elapsed * 3.6 + b.wobblePhase) * 6;
+              b.entity._shield.setLocalEulerAngles(0, tilt, 0);
+            }
+            if (b.entity._creAura) {
+              b.entity._creAura.rotate(0, 0, safeDt * 85);
+              const glowPulse = 0.94 + 0.14 * Math.sin(state.elapsed * 6.5 + b.wobblePhase);
+              b.entity._creAura.setLocalScale(glowPulse, glowPulse, 1);
+            }
+          }
+
+          const leadS = state.train[state.train.length - 1].s;
+          const dangerRatio = leadS / TRACK.totalLength;
+          dangerBannerEl.classList.toggle('active', dangerRatio > 0.78);
+          if (leadS >= TRACK.totalLength - 0.15) {
+            showEndModal(false);
+            return;
+          }
+        } else if (state.stopSpawning) {
+          let hasHeld = false;
+          for (let i = 0; i < defenseSlots.length; i++) {
+            const occ = defenseSlots[i].occupant;
+            if (occ && occ.kind === 'isolation' && occ.isolatedCres.length > 0) {
+              releaseIsolatedCres(defenseSlots[i], '清空釋放 CRE');
+              hasHeld = true;
+            }
+          }
+          if (!hasHeld) {
+            showEndModal(true);
+            return;
+          }
+        }
+
+        // --- Update Deployed Defenders (Handwash / Isolation / Care Bundle) ---
+        const hasNonCreOnTrack = state.train.some((item) => item.type !== 6);
+        for (let i = 0; i < defenseSlots.length; i++) {
+          const sl = defenseSlots[i];
+          const occ = sl.occupant;
+          if (!occ) continue;
+
+          if (occ.entity && occ.entity._arm) {
+            const sw = Math.sin(state.elapsed * (occ.kind === 'isolation' ? 5.2 : 2.6) + sl.phase) * (occ.kind === 'isolation' ? 18 : 7);
+            occ.entity._arm.setLocalEulerAngles(0, 0, sw);
+          }
+
+          if (occ.kind === 'handwash') {
+            occ.cooldown -= safeDt;
+            if (occ.cooldown <= 0) {
+              const candidates = [];
+              for (let j = 0; j < state.train.length; j++) {
+                const pt = sampleTrack(state.train[j].s);
+                if (Math.hypot(pt.x - sl.x, pt.y - sl.y) <= DEFENDER_RANGE) {
+                  candidates.push(state.train[j]);
+                }
+              }
+              if (candidates.length > 0) {
+                const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                launchDefenderProjectile(sl, 'water', chosen);
+                occ.cooldown = 4.0;
+              } else {
+                occ.cooldown = 0.25;
+              }
+            }
+          } else if (occ.kind === 'isolation') {
+            if (occ.isolatedCres.length < 3) {
+              for (let j = state.train.length - 1; j >= 0; j--) {
+                const item = state.train[j];
+                if (item.type !== 6) continue;
+                if (item._releasedBy && item._releasedBy[sl.id]) continue;
+                const pt = sampleTrack(item.s);
+                if (Math.hypot(pt.x - sl.x, pt.y - sl.y) <= ISOLATION_CAPTURE_RANGE) {
+                  state.train.splice(j, 1);
+                  occ.isolatedCres.push(item);
+                  SoundFX.playIsolate();
+                  spawnFloatingText(sl.x, sl.y + 0.55, '隔離 CRE (' + occ.isolatedCres.length + '/3)', '#9ad8ff', 16);
+                  if (occ.isolatedCres.length >= 3) break;
+                }
+              }
+            }
+
+            const heldCount = occ.isolatedCres.length;
+            if (occ.entity && occ.entity._isoField) {
+              occ.entity._isoField.enabled = heldCount > 0;
+            }
+            for (let k = 0; k < heldCount; k++) {
+              const ang = state.elapsed * 2.2 + (Math.PI * 2 * k) / Math.max(1, heldCount);
+              const hx = sl.x + Math.cos(ang) * 0.42;
+              const hy = sl.y + Math.sin(ang) * 0.42;
+              occ.isolatedCres[k].entity.setPosition(hx, hy, 0.35);
+              occ.isolatedCres[k].entity.setLocalScale(0.68, 0.68, 0.68);
+            }
+
+            if (heldCount >= 3) {
+              releaseIsolatedCres(sl, '集滿 3 顆 CRE 放出!');
+            } else if (heldCount > 0 && !hasNonCreOnTrack && state.stopSpawning) {
+              releaseIsolatedCres(sl, '無其他細菌・放出 CRE');
+            }
+          } else if (occ.kind === 'bundle') {
+            occ.cooldown -= safeDt;
+            if (occ.cooldown <= 0) {
+              const target = pickBundleTarget(sl);
+              if (target) {
+                launchDefenderProjectile(sl, 'fireball', target);
+                occ.cooldown = 6.0;
+              } else {
+                occ.cooldown = 0.25;
+              }
+            }
+          }
+        }
+
+        // --- Update Defender Projectiles (Water Jet & Fireball) ---
+        for (let i = state.defenderProjectiles.length - 1; i >= 0; i--) {
+          const dp = state.defenderProjectiles[i];
+          if (state.train.indexOf(dp.targetItem) === -1) {
+            dp.entity.destroy();
+            state.defenderProjectiles.splice(i, 1);
+            continue;
+          }
+          const tpt = sampleTrack(dp.targetItem.s);
+          const dx = tpt.x - dp.x;
+          const dy = tpt.y - dp.y;
+          const dist = Math.hypot(dx, dy);
+          const step = dp.speed * safeDt;
+          if (dist <= step + 0.35) {
+            const targetRef = dp.targetItem;
+            const pKind = dp.kind;
+            dp.entity.destroy();
+            state.defenderProjectiles.splice(i, 1);
+            eliminateSingleByDefender(targetRef, pKind);
+          } else {
+            dp.x += (dx / dist) * step;
+            dp.y += (dy / dist) * step;
+            dp.entity.setPosition(dp.x, dp.y, 0.38);
+            dp.entity.rotate(0, 0, safeDt * 360);
+          }
+        }
+
+        // --- Update Weapon Projectiles & Collision ---
+        for (let i = state.projectiles.length - 1; i >= 0; i--) {
+          const proj = state.projectiles[i];
+          proj.x += proj.vx * safeDt;
+          proj.y += proj.vy * safeDt;
+
+          if (proj.x > PLAYFIELD_HALF_W) {
+            proj.x = PLAYFIELD_HALF_W;
+            proj.vx = -Math.abs(proj.vx);
+            proj.angleDeg = (Math.atan2(proj.vy, proj.vx) * 180) / Math.PI - 90;
+          } else if (proj.x < -PLAYFIELD_HALF_W) {
+            proj.x = -PLAYFIELD_HALF_W;
+            proj.vx = Math.abs(proj.vx);
+            proj.angleDeg = (Math.atan2(proj.vy, proj.vx) * 180) / Math.PI - 90;
+          }
+
+          proj.entity.setPosition(proj.x, proj.y, 0.2);
+          proj.entity.setEulerAngles(0, 0, proj.angleDeg);
+
+          if (proj.y > 9.5) {
+            proj.entity.destroy();
+            state.projectiles.splice(i, 1);
+            continue;
+          }
+
+          let hitIdx = -1;
+          let bestDist = BUBBLE_RADIUS * 1.92;
+          for (let j = 0; j < state.train.length; j++) {
+            const pt = sampleTrack(state.train[j].s);
+            const d = Math.hypot(proj.x - pt.x, proj.y - pt.y);
+            if (d < bestDist) {
+              bestDist = d;
+              hitIdx = j;
+            }
+          }
+
+          if (hitIdx !== -1) {
+            const wId = proj.weaponId;
+            proj.entity.destroy();
+            state.projectiles.splice(i, 1);
+            handleWeaponHit(hitIdx, wId);
+          }
+        }
+      });
+
+      /* ============================================================
+         12. BOOT
+      ============================================================ */
+      window.addEventListener('load', () => {
+        handleResize();
+        app.start();
+        startIntro();
+      });
+    })();
+  </script>
+</body>
+</html>
