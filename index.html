@@ -175,6 +175,30 @@
     }
 
     /* Weapon Switch Floating Banner */
+    #aim-cancel-hint {
+      position: absolute;
+      bottom: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(255, 71, 102, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.14s ease;
+      z-index: 23;
+      white-space: nowrap;
+    }
+
+    #aim-cancel-hint.show {
+      opacity: 1;
+    }
+
     #weapon-toast {
       position: absolute;
       bottom: 14px;
@@ -1286,6 +1310,7 @@
         <div class="amr-value" id="amr-val-text">0</div>
         <div class="amr-max">/20</div>
       </div>
+      <div id="aim-cancel-hint">✕ 放開以取消發射</div>
       <div id="weapon-toast"><span class="toast-dot" id="weapon-toast-dot"></span><span id="weapon-toast-text">Tamiflu</span></div>
       <div id="fx-layer"></div>
 
@@ -1317,7 +1342,7 @@
           <div class="controls-box">
             <div class="control-item">
               <span>🖱️📱</span>
-              <div><strong>操作：</strong>點擊下方並排武器直接換藥（電腦支援數字鍵），點擊目標射出；點擊地圖圓圈部署防禦角色。</div>
+              <div><strong>操作：</strong>點擊下方武器換藥；<strong>按住畫面拖曳瞄準、放開才發射</strong>（拖回砲台下方可取消）；點擊地圖圓圈部署防禦角色。</div>
             </div>
             <div class="control-item">
               <span>🪙</span>
@@ -2700,7 +2725,7 @@
 
       function addCuteFace(parent, headY, headZ, scale) {
         const sc = scale || 1.0;
-        [-0.085, 0.085].forEach((ex) => {
+        [-0.082, 0.082].forEach((ex) => {
           const ew = new pc.Entity('eyeW');
           ew.addComponent('render', { type: 'sphere', material: charEyeWhiteMat });
           ew.setLocalPosition(ex * sc, (headY + 0.015) * sc, (headZ + 0.135) * sc);
@@ -2713,320 +2738,409 @@
           ep.setLocalScale(0.048 * sc, 0.055 * sc, 0.03 * sc);
           parent.addChild(ep);
 
+          // Tiny eye sparkle
+          const es = new pc.Entity('eyeSpark');
+          es.addComponent('render', { type: 'sphere', material: charEyeWhiteMat });
+          es.setLocalPosition((ex - 0.015) * sc, (headY + 0.032) * sc, (headZ + 0.178) * sc);
+          es.setLocalScale(0.02 * sc, 0.02 * sc, 0.015 * sc);
+          parent.addChild(es);
+
           const bl = new pc.Entity('blush');
           bl.addComponent('render', { type: 'sphere', material: blushMat });
           bl.setLocalPosition(ex * 1.48 * sc, (headY - 0.045) * sc, (headZ + 0.12) * sc);
-          bl.setLocalScale(0.065 * sc, 0.04 * sc, 0.03 * sc);
+          bl.setLocalScale(0.065 * sc, 0.038 * sc, 0.03 * sc);
           parent.addChild(bl);
         });
+        // Subtle smile
+        const mouth = new pc.Entity('mouth');
+        mouth.addComponent('render', { type: 'box', material: blushMat });
+        mouth.setLocalPosition(0, (headY - 0.068) * sc, (headZ + 0.145) * sc);
+        mouth.setLocalScale(0.075 * sc, 0.022 * sc, 0.02 * sc);
+        parent.addChild(mouth);
       }
 
       function createDefenderModel(kind) {
         const root = new pc.Entity('defender_' + kind);
+        const bodyGroup = new pc.Entity('bodyGroup');
+        root.addChild(bodyGroup);
+        root._bodyGroup = bodyGroup;
+
         if (kind === 'handwash') {
-          // 消防員：紅衣防火服＋雙反光金條＋水箱背包＋頭盔護目鏡＋水帶噴嘴＋可愛表情
+          // 消防員：紅衣防火服＋肩章＋腰帶金扣＋銀色高壓水箱＋雙反光金條＋護目鏡頭盔＋可360度瞄準水帶噴嘴
           [-0.1, 0.1].forEach((bx) => {
             const boot = new pc.Entity('boot');
             boot.addComponent('render', { type: 'box', material: bootDarkMat });
-            boot.setLocalPosition(bx, -0.36, 0.18);
-            boot.setLocalScale(0.14, 0.12, 0.18);
-            root.addChild(boot);
+            boot.setLocalPosition(bx, -0.37, 0.18);
+            boot.setLocalScale(0.14, 0.12, 0.2);
+            bodyGroup.addChild(boot);
           });
 
+          // Silver pressurized water backpack tank + gauge
           const tank = new pc.Entity('waterTank');
           tank.addComponent('render', { type: 'cylinder', material: capMetalMat });
-          tank.setLocalPosition(0, -0.06, -0.04);
-          tank.setLocalScale(0.32, 0.42, 0.2);
-          root.addChild(tank);
+          tank.setLocalPosition(0, -0.04, -0.05);
+          tank.setLocalScale(0.32, 0.44, 0.22);
+          bodyGroup.addChild(tank);
+
+          const tankCap = new pc.Entity('tankCap');
+          tankCap.addComponent('render', { type: 'sphere', material: goldTrimMat });
+          tankCap.setLocalPosition(0, 0.19, -0.05);
+          tankCap.setLocalScale(0.18, 0.12, 0.18);
+          bodyGroup.addChild(tankCap);
 
           const coat = new pc.Entity('coat');
           coat.addComponent('render', { type: 'cylinder', material: fireRedMat });
           coat.setLocalPosition(0, -0.1, 0.16);
-          coat.setLocalScale(0.44, 0.48, 0.36);
-          root.addChild(coat);
+          coat.setLocalScale(0.45, 0.5, 0.36);
+          bodyGroup.addChild(coat);
 
-          // Double reflective safety stripes
-          [-0.03, -0.22].forEach((sy) => {
+          // Shoulder pads
+          [-0.22, 0.22].forEach((sx) => {
+            const pad = new pc.Entity('shoulderPad');
+            pad.addComponent('render', { type: 'sphere', material: fireRedMat });
+            pad.setLocalPosition(sx, 0.07, 0.16);
+            pad.setLocalScale(0.16, 0.14, 0.16);
+            bodyGroup.addChild(pad);
+          });
+
+          // Belt + brass buckle + double reflective yellow stripes
+          const belt = new pc.Entity('belt');
+          belt.addComponent('render', { type: 'cylinder', material: bootDarkMat });
+          belt.setLocalPosition(0, -0.13, 0.16);
+          belt.setLocalScale(0.47, 0.065, 0.38);
+          bodyGroup.addChild(belt);
+
+          const buckle = new pc.Entity('buckle');
+          buckle.addComponent('render', { type: 'box', material: goldTrimMat });
+          buckle.setLocalPosition(0, -0.13, 0.35);
+          buckle.setLocalScale(0.12, 0.09, 0.05);
+          bodyGroup.addChild(buckle);
+
+          [-0.01, -0.24].forEach((sy) => {
             const stripe = new pc.Entity('coatStripe');
             stripe.addComponent('render', { type: 'cylinder', material: goldTrimMat });
             stripe.setLocalPosition(0, sy, 0.16);
-            stripe.setLocalScale(0.46, 0.065, 0.38);
-            root.addChild(stripe);
+            stripe.setLocalScale(0.465, 0.055, 0.38);
+            bodyGroup.addChild(stripe);
           });
 
           const head = new pc.Entity('head');
           head.addComponent('render', { type: 'sphere', material: skinMat });
           head.setLocalPosition(0, 0.24, 0.18);
           head.setLocalScale(0.34, 0.34, 0.34);
-          root.addChild(head);
-          addCuteFace(root, 0.24, 0.18, 1.0);
+          bodyGroup.addChild(head);
+          addCuteFace(bodyGroup, 0.24, 0.18, 1.0);
 
-          // Detailed firefighter helmet + crest + clear visor
           const helmet = new pc.Entity('helmet');
           helmet.addComponent('render', { type: 'sphere', material: fireRedMat });
-          helmet.setLocalPosition(0, 0.34, 0.17);
-          helmet.setLocalScale(0.38, 0.24, 0.38);
-          root.addChild(helmet);
+          helmet.setLocalPosition(0, 0.35, 0.17);
+          helmet.setLocalScale(0.39, 0.24, 0.39);
+          bodyGroup.addChild(helmet);
 
           const crest = new pc.Entity('helmetCrest');
           crest.addComponent('render', { type: 'box', material: goldTrimMat });
-          crest.setLocalPosition(0, 0.38, 0.34);
-          crest.setLocalScale(0.11, 0.14, 0.06);
-          root.addChild(crest);
+          crest.setLocalPosition(0, 0.39, 0.35);
+          crest.setLocalScale(0.12, 0.15, 0.06);
+          bodyGroup.addChild(crest);
 
           const brim = new pc.Entity('brim');
           brim.addComponent('render', { type: 'cylinder', material: goldTrimMat });
-          brim.setLocalPosition(0, 0.29, 0.17);
-          brim.setLocalScale(0.48, 0.05, 0.48);
-          root.addChild(brim);
+          brim.setLocalPosition(0, 0.295, 0.17);
+          brim.setLocalScale(0.5, 0.05, 0.5);
+          bodyGroup.addChild(brim);
 
           const visor = new pc.Entity('visor');
           visor.addComponent('render', { type: 'box', material: visorGlassMat });
-          visor.setLocalPosition(0, 0.26, 0.34);
-          visor.setLocalScale(0.28, 0.1, 0.04);
-          root.addChild(visor);
+          visor.setLocalPosition(0, 0.265, 0.35);
+          visor.setLocalScale(0.28, 0.095, 0.04);
+          bodyGroup.addChild(visor);
 
-          // Water hose arm + pressurized nozzle + water bead
-          const hoseArm = new pc.Entity('hoseArm');
-          hoseArm.setLocalPosition(0.18, -0.02, 0.28);
+          // 360-degree aiming Hose Arm Pivot (points straight along local +X)
+          const armPivot = new pc.Entity('hoseArmPivot');
+          armPivot.setLocalPosition(0, -0.02, 0.32);
 
-          const sleeve = new pc.Entity('sleeve');
-          sleeve.addComponent('render', { type: 'cylinder', material: fireRedMat });
-          sleeve.setLocalPosition(0.06, 0.01, 0);
-          sleeve.setLocalEulerAngles(0, 0, -70);
-          sleeve.setLocalScale(0.12, 0.22, 0.12);
-          hoseArm.addChild(sleeve);
+          const glove = new pc.Entity('glove');
+          glove.addComponent('render', { type: 'sphere', material: goldTrimMat });
+          glove.setLocalPosition(0.18, 0, 0);
+          glove.setLocalScale(0.13, 0.13, 0.13);
+          armPivot.addChild(glove);
 
           const hose = new pc.Entity('hose');
           hose.addComponent('render', { type: 'cylinder', material: hoseBlueMat });
-          hose.setLocalPosition(0.18, 0.06, 0);
-          hose.setLocalEulerAngles(0, 0, -68);
-          hose.setLocalScale(0.1, 0.46, 0.1);
-          hoseArm.addChild(hose);
+          hose.setLocalPosition(0.24, 0, 0);
+          hose.setLocalEulerAngles(0, 0, -90);
+          hose.setLocalScale(0.105, 0.44, 0.105);
+          armPivot.addChild(hose);
+
+          const nozzleRing = new pc.Entity('nozzleRing');
+          nozzleRing.addComponent('render', { type: 'cylinder', material: goldTrimMat });
+          nozzleRing.setLocalPosition(0.42, 0, 0);
+          nozzleRing.setLocalEulerAngles(0, 0, -90);
+          nozzleRing.setLocalScale(0.15, 0.06, 0.15);
+          armPivot.addChild(nozzleRing);
 
           const nozzle = new pc.Entity('nozzle');
           nozzle.addComponent('render', { type: 'cone', material: capMetalMat });
-          nozzle.setLocalPosition(0.39, 0.15, 0);
-          nozzle.setLocalEulerAngles(0, 0, -68);
+          nozzle.setLocalPosition(0.5, 0, 0);
+          nozzle.setLocalEulerAngles(0, 0, -90);
           nozzle.setLocalScale(0.15, 0.18, 0.15);
-          hoseArm.addChild(nozzle);
+          armPivot.addChild(nozzle);
 
           const tipDrop = new pc.Entity('tipDrop');
           tipDrop.addComponent('render', { type: 'sphere', material: waterJetMat });
-          tipDrop.setLocalPosition(0.48, 0.19, 0);
-          tipDrop.setLocalScale(0.12, 0.12, 0.12);
-          hoseArm.addChild(tipDrop);
+          tipDrop.setLocalPosition(0.58, 0, 0);
+          tipDrop.setLocalScale(0.11, 0.11, 0.11);
+          armPivot.addChild(tipDrop);
 
-          root.addChild(hoseArm);
-          root._arm = hoseArm;
+          root.addChild(armPivot);
+          root._arm = armPivot;
+          root._baseArmAngle = 15;
         } else if (kind === 'isolation') {
-          // 指揮家：燕尾服＋紅領結＋金鈕扣＋銀絲背頭＋左掌攔阻＋右持發光指揮棒
+          // 指揮家：緞面翻領燕尾服＋紅領結＋雙金鈕扣＋白袖口＋銀絲背頭＋可360度指向發光指揮棒
           [-0.09, 0.09].forEach((bx) => {
             const shoe = new pc.Entity('shoe');
             shoe.addComponent('render', { type: 'box', material: bootDarkMat });
             shoe.setLocalPosition(bx, -0.37, 0.18);
-            shoe.setLocalScale(0.12, 0.1, 0.18);
-            root.addChild(shoe);
+            shoe.setLocalScale(0.12, 0.1, 0.19);
+            bodyGroup.addChild(shoe);
           });
 
           const tux = new pc.Entity('tux');
           tux.addComponent('render', { type: 'cylinder', material: tuxBlackMat });
           tux.setLocalPosition(0, -0.1, 0.16);
-          tux.setLocalScale(0.42, 0.5, 0.34);
-          root.addChild(tux);
+          tux.setLocalScale(0.43, 0.5, 0.34);
+          bodyGroup.addChild(tux);
 
-          // Flowing tuxedo coattails
           [-0.12, 0.12].forEach((tx) => {
             const tail = new pc.Entity('coattail');
             tail.addComponent('render', { type: 'box', material: tuxBlackMat });
-            tail.setLocalPosition(tx, -0.26, 0.04);
-            tail.setLocalEulerAngles(14, 0, tx > 0 ? 10 : -10);
-            tail.setLocalScale(0.14, 0.28, 0.06);
-            root.addChild(tail);
+            tail.setLocalPosition(tx, -0.27, 0.03);
+            tail.setLocalEulerAngles(16, 0, tx > 0 ? 10 : -10);
+            tail.setLocalScale(0.15, 0.3, 0.06);
+            bodyGroup.addChild(tail);
+
+            // Satin lapel accents
+            const lapel = new pc.Entity('lapel');
+            lapel.addComponent('render', { type: 'box', material: silverHairMat });
+            lapel.setLocalPosition(tx * 0.78, 0.01, 0.325);
+            lapel.setLocalEulerAngles(0, 0, tx > 0 ? -18 : 18);
+            lapel.setLocalScale(0.055, 0.24, 0.03);
+            bodyGroup.addChild(lapel);
           });
 
           const shirt = new pc.Entity('shirt');
           shirt.addComponent('render', { type: 'box', material: tamifluWhiteMat });
           shirt.setLocalPosition(0, -0.02, 0.32);
           shirt.setLocalScale(0.15, 0.3, 0.05);
-          root.addChild(shirt);
+          bodyGroup.addChild(shirt);
 
           const bowtie = new pc.Entity('bowtie');
           bowtie.addComponent('render', { type: 'box', material: fireRedMat });
-          bowtie.setLocalPosition(0, 0.09, 0.35);
-          bowtie.setLocalScale(0.16, 0.065, 0.045);
-          root.addChild(bowtie);
+          bowtie.setLocalPosition(0, 0.095, 0.35);
+          bowtie.setLocalScale(0.17, 0.068, 0.045);
+          bodyGroup.addChild(bowtie);
 
           [-0.04, -0.14].forEach((by) => {
             const btn = new pc.Entity('tuxBtn');
             btn.addComponent('render', { type: 'sphere', material: goldTrimMat });
             btn.setLocalPosition(0, by, 0.355);
-            btn.setLocalScale(0.05, 0.05, 0.03);
-            root.addChild(btn);
+            btn.setLocalScale(0.055, 0.055, 0.03);
+            bodyGroup.addChild(btn);
           });
 
           const head = new pc.Entity('head');
           head.addComponent('render', { type: 'sphere', material: skinMat });
           head.setLocalPosition(0, 0.24, 0.18);
           head.setLocalScale(0.34, 0.34, 0.34);
-          root.addChild(head);
-          addCuteFace(root, 0.24, 0.18, 1.0);
+          bodyGroup.addChild(head);
+          addCuteFace(bodyGroup, 0.24, 0.18, 1.0);
 
           const hair = new pc.Entity('hair');
           hair.addComponent('render', { type: 'sphere', material: tuxBlackMat });
           hair.setLocalPosition(0, 0.33, 0.15);
           hair.setLocalScale(0.36, 0.22, 0.36);
-          root.addChild(hair);
+          bodyGroup.addChild(hair);
 
-          // Distinguished silver temple streaks
           [-0.16, 0.16].forEach((sx) => {
             const streak = new pc.Entity('silverHair');
             streak.addComponent('render', { type: 'sphere', material: silverHairMat });
             streak.setLocalPosition(sx, 0.29, 0.22);
             streak.setLocalScale(0.09, 0.11, 0.09);
-            root.addChild(streak);
+            bodyGroup.addChild(streak);
           });
 
-          // Left commanding hand
           const leftHand = new pc.Entity('leftHand');
           leftHand.addComponent('render', { type: 'sphere', material: tamifluWhiteMat });
-          leftHand.setLocalPosition(-0.28, 0.06, 0.26);
+          leftHand.setLocalPosition(-0.27, 0.05, 0.26);
           leftHand.setLocalScale(0.12, 0.12, 0.12);
-          root.addChild(leftHand);
+          bodyGroup.addChild(leftHand);
 
-          // Right baton arm
-          const batonArm = new pc.Entity('batonArm');
-          batonArm.setLocalPosition(0.22, 0.06, 0.28);
+          // 360-degree aiming Conductor Baton Pivot (points straight along local +X)
+          const armPivot = new pc.Entity('batonArmPivot');
+          armPivot.setLocalPosition(0, 0.04, 0.32);
+
+          const cuff = new pc.Entity('cuff');
+          cuff.addComponent('render', { type: 'cylinder', material: tamifluWhiteMat });
+          cuff.setLocalPosition(0.16, 0, 0);
+          cuff.setLocalEulerAngles(0, 0, -90);
+          cuff.setLocalScale(0.11, 0.08, 0.11);
+          armPivot.addChild(cuff);
 
           const glove = new pc.Entity('rightGlove');
           glove.addComponent('render', { type: 'sphere', material: tamifluWhiteMat });
-          glove.setLocalPosition(0.04, 0.04, 0);
+          glove.setLocalPosition(0.22, 0, 0);
           glove.setLocalScale(0.11, 0.11, 0.11);
-          batonArm.addChild(glove);
+          armPivot.addChild(glove);
 
           const baton = new pc.Entity('baton');
           baton.addComponent('render', { type: 'cylinder', material: batonMat });
-          baton.setLocalPosition(0.2, 0.24, 0);
-          baton.setLocalEulerAngles(0, 0, -38);
-          baton.setLocalScale(0.045, 0.62, 0.045);
-          batonArm.addChild(baton);
+          baton.setLocalPosition(0.45, 0, 0);
+          baton.setLocalEulerAngles(0, 0, -90);
+          baton.setLocalScale(0.042, 0.56, 0.042);
+          armPivot.addChild(baton);
 
           const tip = new pc.Entity('batonTip');
           tip.addComponent('render', { type: 'sphere', material: goldTrimMat });
-          tip.setLocalPosition(0.39, 0.47, 0);
-          tip.setLocalScale(0.11, 0.11, 0.11);
-          batonArm.addChild(tip);
+          tip.setLocalPosition(0.74, 0, 0);
+          tip.setLocalScale(0.115, 0.115, 0.115);
+          armPivot.addChild(tip);
 
-          root.addChild(batonArm);
-          root._arm = batonArm;
+          root.addChild(armPivot);
+          root._arm = armPivot;
+          root._baseArmAngle = 35;
 
           const field = new pc.Entity('isoField');
           field.addComponent('render', { type: 'sphere', material: isolateFieldMat });
           field.setLocalPosition(0, 0, 0.05);
-          field.setLocalScale(1.15, 1.15, 0.2);
+          field.setLocalScale(1.18, 1.18, 0.2);
           field.enabled = false;
           root.addChild(field);
           root._isoField = field;
         } else {
-          // 女性魔法師：紫金滾邊法袍＋桃紅腰帶＋長髮側辮＋星帶尖帽＋雕紋火球魔杖
+          // 女性魔法師：紫金雙層法袍＋寶石胸針＋桃紅披肩腰帶＋雙長辮＋金扣星尖帽＋可360度指向月牙火球魔杖
+          [-0.09, 0.09].forEach((bx) => {
+            const boot = new pc.Entity('mageBoot');
+            boot.addComponent('render', { type: 'sphere', material: mageRobeMat });
+            boot.setLocalPosition(bx, -0.39, 0.2);
+            boot.setLocalScale(0.12, 0.09, 0.16);
+            bodyGroup.addChild(boot);
+          });
+
           const robe = new pc.Entity('robe');
           robe.addComponent('render', { type: 'cone', material: mageRobeMat });
           robe.setLocalPosition(0, -0.1, 0.16);
-          robe.setLocalScale(0.54, 0.6, 0.44);
-          root.addChild(robe);
+          robe.setLocalScale(0.55, 0.6, 0.45);
+          bodyGroup.addChild(robe);
 
           const hemTrim = new pc.Entity('hemTrim');
           hemTrim.addComponent('render', { type: 'cylinder', material: goldTrimMat });
           hemTrim.setLocalPosition(0, -0.37, 0.16);
-          hemTrim.setLocalScale(0.54, 0.055, 0.44);
-          root.addChild(hemTrim);
+          hemTrim.setLocalScale(0.55, 0.055, 0.45);
+          bodyGroup.addChild(hemTrim);
 
           const sash = new pc.Entity('mageSash');
           sash.addComponent('render', { type: 'cylinder', material: mageSashMat });
           sash.setLocalPosition(0, -0.04, 0.17);
-          sash.setLocalScale(0.34, 0.08, 0.3);
-          root.addChild(sash);
+          sash.setLocalScale(0.35, 0.08, 0.3);
+          bodyGroup.addChild(sash);
 
-          const collar = new pc.Entity('mageCollar');
-          collar.addComponent('render', { type: 'cylinder', material: mageSashMat });
-          collar.setLocalPosition(0, 0.1, 0.18);
-          collar.setLocalScale(0.36, 0.07, 0.32);
-          root.addChild(collar);
+          const capelet = new pc.Entity('mageCapelet');
+          capelet.addComponent('render', { type: 'cone', material: mageSashMat });
+          capelet.setLocalPosition(0, 0.07, 0.17);
+          capelet.setLocalScale(0.46, 0.18, 0.36);
+          bodyGroup.addChild(capelet);
+
+          const brooch = new pc.Entity('mageBrooch');
+          brooch.addComponent('render', { type: 'sphere', material: goldTrimMat });
+          brooch.setLocalPosition(0, 0.08, 0.34);
+          brooch.setLocalScale(0.1, 0.1, 0.06);
+          bodyGroup.addChild(brooch);
 
           const head = new pc.Entity('head');
           head.addComponent('render', { type: 'sphere', material: skinMat });
-          head.setLocalPosition(0, 0.23, 0.18);
+          head.setLocalPosition(0, 0.24, 0.18);
           head.setLocalScale(0.32, 0.32, 0.32);
-          root.addChild(head);
-          addCuteFace(root, 0.23, 0.18, 0.96);
+          bodyGroup.addChild(head);
+          addCuteFace(bodyGroup, 0.24, 0.18, 0.96);
 
-          // Flowing chestnut hair + twin side locks
           const hairBack = new pc.Entity('hairBack');
           hairBack.addComponent('render', { type: 'sphere', material: mageHairMat });
           hairBack.setLocalPosition(0, 0.2, 0.09);
           hairBack.setLocalScale(0.38, 0.38, 0.28);
-          root.addChild(hairBack);
+          bodyGroup.addChild(hairBack);
 
           [-0.17, 0.17].forEach((hx) => {
             const lock = new pc.Entity('hairLock');
             lock.addComponent('render', { type: 'capsule', material: mageHairMat });
             lock.setLocalPosition(hx, 0.1, 0.2);
-            lock.setLocalScale(0.11, 0.16, 0.1);
-            root.addChild(lock);
+            lock.setLocalScale(0.11, 0.18, 0.1);
+            bodyGroup.addChild(lock);
           });
 
-          // Pointed mage hat with golden band & buckle
           const hatBrim = new pc.Entity('hatBrim');
           hatBrim.addComponent('render', { type: 'cylinder', material: mageRobeMat });
-          hatBrim.setLocalPosition(0, 0.34, 0.18);
-          hatBrim.setLocalScale(0.58, 0.055, 0.58);
-          root.addChild(hatBrim);
+          hatBrim.setLocalPosition(0, 0.35, 0.18);
+          hatBrim.setLocalScale(0.6, 0.055, 0.6);
+          bodyGroup.addChild(hatBrim);
 
           const hatBand = new pc.Entity('hatBand');
           hatBand.addComponent('render', { type: 'cylinder', material: goldTrimMat });
-          hatBand.setLocalPosition(0, 0.38, 0.18);
-          hatBand.setLocalScale(0.35, 0.06, 0.35);
-          root.addChild(hatBand);
+          hatBand.setLocalPosition(0, 0.39, 0.18);
+          hatBand.setLocalScale(0.36, 0.06, 0.36);
+          bodyGroup.addChild(hatBand);
+
+          const hatBuckle = new pc.Entity('hatBuckle');
+          hatBuckle.addComponent('render', { type: 'box', material: mageSashMat });
+          hatBuckle.setLocalPosition(0, 0.395, 0.36);
+          hatBuckle.setLocalScale(0.1, 0.08, 0.04);
+          bodyGroup.addChild(hatBuckle);
 
           const hatCone = new pc.Entity('hatCone');
           hatCone.addComponent('render', { type: 'cone', material: mageRobeMat });
-          hatCone.setLocalPosition(-0.02, 0.52, 0.18);
+          hatCone.setLocalPosition(-0.02, 0.53, 0.18);
           hatCone.setLocalEulerAngles(0, 0, 10);
-          hatCone.setLocalScale(0.36, 0.4, 0.36);
-          root.addChild(hatCone);
+          hatCone.setLocalScale(0.36, 0.42, 0.36);
+          bodyGroup.addChild(hatCone);
 
-          // Ornate magic staff with golden ring & glowing fireball crystal
-          const staffArm = new pc.Entity('staffArm');
-          staffArm.setLocalPosition(0.28, -0.02, 0.26);
+          const hatStar = new pc.Entity('hatStar');
+          hatStar.addComponent('render', { type: 'sphere', material: goldTrimMat });
+          hatStar.setLocalPosition(-0.06, 0.72, 0.18);
+          hatStar.setLocalScale(0.085, 0.085, 0.085);
+          bodyGroup.addChild(hatStar);
+
+          // 360-degree aiming Magic Staff Pivot (points straight along local +X)
+          const armPivot = new pc.Entity('staffArmPivot');
+          armPivot.setLocalPosition(0, 0.0, 0.32);
 
           const staff = new pc.Entity('staff');
           staff.addComponent('render', { type: 'cylinder', material: staffWoodMat });
-          staff.setLocalPosition(0, 0.12, 0);
-          staff.setLocalEulerAngles(0, 0, -14);
-          staff.setLocalScale(0.06, 0.88, 0.06);
-          staffArm.addChild(staff);
+          staff.setLocalPosition(0.3, 0, 0);
+          staff.setLocalEulerAngles(0, 0, -90);
+          staff.setLocalScale(0.058, 0.64, 0.058);
+          armPivot.addChild(staff);
 
           const staffRing = new pc.Entity('staffRing');
           staffRing.addComponent('render', { type: 'cylinder', material: goldTrimMat });
-          staffRing.setLocalPosition(0.08, 0.45, 0);
-          staffRing.setLocalEulerAngles(0, 0, -14);
-          staffRing.setLocalScale(0.14, 0.06, 0.14);
-          staffArm.addChild(staffRing);
+          staffRing.setLocalPosition(0.55, 0, 0);
+          staffRing.setLocalEulerAngles(0, 0, -90);
+          staffRing.setLocalScale(0.16, 0.06, 0.16);
+          armPivot.addChild(staffRing);
 
           const orb = new pc.Entity('staffOrb');
           orb.addComponent('render', { type: 'sphere', material: fireballMat });
-          orb.setLocalPosition(0.11, 0.57, 0);
-          orb.setLocalScale(0.21, 0.21, 0.21);
-          staffArm.addChild(orb);
+          orb.setLocalPosition(0.66, 0, 0);
+          orb.setLocalScale(0.22, 0.22, 0.22);
+          armPivot.addChild(orb);
 
           const orbCore = new pc.Entity('staffOrbCore');
           orbCore.addComponent('render', { type: 'sphere', material: goldTrimMat });
-          orbCore.setLocalPosition(0.11, 0.57, 0.08);
-          orbCore.setLocalScale(0.1, 0.1, 0.1);
-          staffArm.addChild(orbCore);
+          orbCore.setLocalPosition(0.66, 0, 0.08);
+          orbCore.setLocalScale(0.105, 0.105, 0.105);
+          armPivot.addChild(orbCore);
 
-          root.addChild(staffArm);
-          root._arm = staffArm;
+          root.addChild(armPivot);
+          root._arm = armPivot;
+          root._baseArmAngle = 25;
         }
         return root;
       }
@@ -3074,18 +3188,22 @@
       muzzleTip.setLocalScale(0.44, 0.3, 0.44);
       turretPivot.addChild(muzzleTip);
 
-      // Aim guide dots
-      const AIM_DOT_COUNT = 12;
+      // Aim guide dots + 3D predicted impact target reticle
+      const AIM_DOT_COUNT = 16;
       const aimDots = [];
       for (let i = 0; i < AIM_DOT_COUNT; i++) {
         const dot = new pc.Entity('aimDot');
         dot.addComponent('render', { type: 'sphere', material: aimDotMats[0] });
-        const sz = 0.15 - i * 0.007;
+        const sz = 0.15 - i * 0.004;
         dot.setLocalScale(sz, sz, sz);
         dot.enabled = false;
         app.root.addChild(dot);
         aimDots.push(dot);
       }
+
+      const aimReticle = createRuneRing('aimReticle', 0.62, 12, 0.095, aimDotMats[0], null);
+      aimReticle.enabled = false;
+      app.root.addChild(aimReticle);
 
       /* ============================================================
          5. GAME STATE
@@ -3107,6 +3225,9 @@
         selectedWeapon: 0,
         aimAngle: Math.PI / 2,
         aimVisible: false,
+        isAiming: false,
+        aimPointerId: null,
+        aimCancelled: false,
         shootCooldown: 0,
         turretRecoil: 0,
         turretPopScale: 1,
@@ -3174,6 +3295,7 @@
       const amrLockoutTimerEl = document.getElementById('amr-lockout-timer');
       const fxLayer = document.getElementById('fx-layer');
 
+      const aimCancelHint = document.getElementById('aim-cancel-hint');
       const weaponToast = document.getElementById('weapon-toast');
       const weaponToastDot = document.getElementById('weapon-toast-dot');
       const weaponToastText = document.getElementById('weapon-toast-text');
@@ -3320,6 +3442,9 @@
 
         aimDots.forEach((d) => {
           applyMaterial(d, aimDotMats[state.selectedWeapon]);
+        });
+        aimReticle.children.forEach((c) => {
+          applyMaterial(c, aimDotMats[state.selectedWeapon]);
         });
       }
 
@@ -3604,7 +3729,12 @@
           cooldown: kind === 'handwash' ? 0.8 : (kind === 'bundle' ? 1.2 : 0),
           entity: model,
           isolatedCres: [],
-          animTimer: 0
+          animTimer: 0,
+          curYaw: 0,
+          targetYaw: 0,
+          curArmAngle: model._baseArmAngle || 20,
+          targetArmAngle: model._baseArmAngle || 20,
+          aimHoldTimer: 0
         };
 
         const paidCost = getDefenderCost(kind) - 10;
@@ -3696,26 +3826,104 @@
         return fallback ? fallback.item : null;
       }
 
+      function createWaterBeamEntity(parent) {
+        const beamRoot = new pc.Entity('waterBeam');
+
+        const outer = new pc.Entity('waterOuter');
+        outer.addComponent('render', { type: 'cylinder', material: waterJetMat });
+        beamRoot.addChild(outer);
+
+        const core = new pc.Entity('waterCore');
+        core.addComponent('render', { type: 'cylinder', material: charEyeWhiteMat });
+        beamRoot.addChild(core);
+
+        const tip = new pc.Entity('waterTip');
+        tip.addComponent('render', { type: 'sphere', material: waterJetMat });
+        beamRoot.addChild(tip);
+
+        beamRoot._outer = outer;
+        beamRoot._core = core;
+        beamRoot._tip = tip;
+        (parent || app.root).addChild(beamRoot);
+        return beamRoot;
+      }
+
+      function updateWaterBeamVisual(beamRoot, sx, sy, tx, ty, progress, widthScale) {
+        const dx = tx - sx;
+        const dy = ty - sy;
+        const fullLen = Math.hypot(dx, dy);
+        const curLen = Math.max(0.08, fullLen * progress);
+        const angDeg = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
+        const mx = sx + dx * progress * 0.5;
+        const my = sy + dy * progress * 0.5;
+
+        beamRoot.setPosition(mx, my, 0.42);
+        beamRoot.setEulerAngles(0, 0, angDeg);
+        const w = 0.24 * widthScale;
+        beamRoot._outer.setLocalScale(w, curLen, w);
+        beamRoot._core.setLocalScale(w * 0.46, curLen * 0.98, w * 0.46);
+        beamRoot._tip.setLocalPosition(0, curLen * 0.5, 0.04);
+        const ts = 0.32 * widthScale;
+        beamRoot._tip.setLocalScale(ts, ts, ts);
+      }
+
+      function aimDefenderToward(slot, tx, ty) {
+        const occ = slot.occupant;
+        if (!occ) return 0;
+        const dx = tx - slot.x;
+        const dy = ty - slot.y;
+        const angRad = Math.atan2(dy, dx);
+        const angDeg = (angRad * 180) / Math.PI;
+        occ.targetYaw = dx < 0 ? -38 : 38;
+        occ.targetArmAngle = angDeg;
+        occ.curArmAngle = angDeg; // Snap weapon immediately onto target on attack
+        occ.aimHoldTimer = 0.75;
+        if (occ.entity && occ.entity._arm) {
+          occ.entity._arm.setLocalEulerAngles(0, 0, angDeg);
+        }
+        return angRad;
+      }
+
       function launchDefenderProjectile(slot, kind, targetItem) {
+        const tpt = sampleTrack(targetItem.s);
+        const angRad = aimDefenderToward(slot, tpt.x, tpt.y);
+        const tipDist = kind === 'water' ? 0.56 : 0.64;
+        const sx = slot.x + Math.cos(angRad) * tipDist;
+        const sy = slot.y + Math.sin(angRad) * tipDist;
+
+        if (kind === 'water') {
+          const beamEnt = createWaterBeamEntity(app.root);
+          updateWaterBeamVisual(beamEnt, sx, sy, tpt.x, tpt.y, 0.05, 1.0);
+          state.defenderProjectiles.push({
+            kind: 'waterBeam',
+            sx,
+            sy,
+            tx: tpt.x,
+            ty: tpt.y,
+            age: 0,
+            hitDone: false,
+            targetItem,
+            entity: beamEnt
+          });
+          SoundFX.playWater();
+          return;
+        }
+
         const projEnt = new pc.Entity('defProj_' + kind);
-        const mat = kind === 'water' ? waterJetMat : fireballMat;
-        projEnt.addComponent('render', { type: 'sphere', material: mat });
-        const sc = kind === 'water' ? 0.28 : 0.34;
-        projEnt.setLocalScale(sc, sc, sc);
-        projEnt.setPosition(slot.x, slot.y, 0.35);
+        projEnt.addComponent('render', { type: 'sphere', material: fireballMat });
+        projEnt.setLocalScale(0.34, 0.34, 0.34);
+        projEnt.setPosition(sx, sy, 0.38);
         app.root.addChild(projEnt);
 
         state.defenderProjectiles.push({
           kind,
-          x: slot.x,
-          y: slot.y,
-          speed: kind === 'water' ? 16.5 : 14.0,
+          x: sx,
+          y: sy,
+          speed: 14.0,
           targetItem,
           entity: projEnt
         });
-
-        if (kind === 'water') SoundFX.playWater();
-        else SoundFX.playFireball();
+        SoundFX.playFireball();
       }
 
       function eliminateSingleByDefender(targetItem, kind) {
@@ -3892,12 +4100,13 @@
         SoundFX.playShoot();
       }
 
-      canvas.addEventListener('pointermove', (ev) => {
-        if (state.mode !== 'playing') return;
-        const w = screenToWorld(ev.clientX, ev.clientY);
-        updateAimToward(w.x, w.y);
-        state.aimVisible = true;
-      });
+      function cancelActiveAim() {
+        state.isAiming = false;
+        state.aimPointerId = null;
+        state.aimCancelled = false;
+        state.aimVisible = false;
+        aimCancelHint.classList.remove('show');
+      }
 
       canvas.addEventListener('pointerdown', (ev) => {
         if (state.mode !== 'playing') return;
@@ -3905,20 +4114,81 @@
         SoundFX.ensure();
         const w = screenToWorld(ev.clientX, ev.clientY);
 
+        // Tap on any of the 6 defense circles opens the defender picker immediately
         for (let i = 0; i < defenseSlots.length; i++) {
           const sl = defenseSlots[i];
           if (Math.hypot(w.x - sl.x, w.y - sl.y) <= sl.radius + 0.24) {
+            cancelActiveAim();
             openDefenderPicker(sl.id);
             return;
           }
         }
 
-        state.aimVisible = true;
-        fireWeaponToward(w.x, w.y);
+        // Start press-and-drag aiming (fires on release!)
+        state.isAiming = true;
+        state.aimPointerId = ev.pointerId;
+        state.aimCancelled = (w.y <= SHOOTER_POS.y + 0.65);
+        aimCancelHint.classList.toggle('show', state.aimCancelled);
+        if (!state.aimCancelled) {
+          updateAimToward(w.x, w.y);
+          state.aimVisible = true;
+        } else {
+          state.aimVisible = false;
+        }
+        try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
       });
 
-      canvas.addEventListener('pointerleave', () => {
-        state.aimVisible = false;
+      canvas.addEventListener('pointermove', (ev) => {
+        if (state.mode !== 'playing') return;
+        const w = screenToWorld(ev.clientX, ev.clientY);
+
+        if (state.isAiming && ev.pointerId === state.aimPointerId) {
+          state.aimCancelled = (w.y <= SHOOTER_POS.y + 0.65);
+          aimCancelHint.classList.toggle('show', state.aimCancelled);
+          if (!state.aimCancelled) {
+            updateAimToward(w.x, w.y);
+            state.aimVisible = true;
+          } else {
+            state.aimVisible = false;
+          }
+          return;
+        }
+
+        // Desktop mouse hover preview (without pressing)
+        if (ev.pointerType === 'mouse' && !state.isAiming) {
+          updateAimToward(w.x, w.y);
+          state.aimVisible = true;
+        }
+      });
+
+      function handleAimRelease(ev, shouldFire) {
+        if (!state.isAiming || ev.pointerId !== state.aimPointerId) return;
+        try { canvas.releasePointerCapture(ev.pointerId); } catch (e) {}
+        const cancelled = state.aimCancelled;
+        const isTouch = ev.pointerType !== 'mouse';
+        state.isAiming = false;
+        state.aimPointerId = null;
+        state.aimCancelled = false;
+        aimCancelHint.classList.remove('show');
+
+        if (shouldFire && !cancelled && state.mode === 'playing') {
+          // Fire along the exact previewed aimAngle
+          const targetX = SHOOTER_POS.x + Math.cos(state.aimAngle) * 6.0;
+          const targetY = SHOOTER_POS.y + Math.sin(state.aimAngle) * 6.0;
+          fireWeaponToward(targetX, targetY);
+        }
+        if (isTouch) {
+          state.aimVisible = false;
+        }
+      }
+
+      canvas.addEventListener('pointerup', (ev) => handleAimRelease(ev, true));
+      canvas.addEventListener('pointercancel', (ev) => handleAimRelease(ev, false));
+
+      canvas.addEventListener('pointerleave', (ev) => {
+        if (ev.pointerType === 'mouse' && !state.isAiming) {
+          state.aimVisible = false;
+        }
       });
 
       // Keyboard shortcuts (1-7 direct select, Esc/P pause)
@@ -3939,6 +4209,7 @@
          9. MODAL & GAME LIFECYCLE CONTROLS
       ============================================================ */
       function showEndModal(isWin) {
+        cancelActiveAim();
         state.mode = isWin ? 'stageClear' : 'gameOver';
         SoundFX.stopBgm();
         saveBestScore();
@@ -4454,11 +4725,8 @@
         }
 
         if (t >= 7.3 && t < 9.8) {
-          if (introState.firefighter && introState.firefighter._arm) {
-            introState.firefighter._arm.setLocalEulerAngles(0, 0, Math.sin(t * 10) * 14);
-          }
-          if (introState.mage && introState.mage._arm) {
-            introState.mage._arm.setLocalEulerAngles(0, 0, Math.sin(t * 10 + 1.5) * 14);
+          if (introState.conductor && introState.conductor._bodyGroup) {
+            introState.conductor._bodyGroup.setLocalEulerAngles(0, 34, 0);
           }
 
           // Smoothly cool AMR gauge back down to green
@@ -4474,23 +4742,34 @@
               // Fire one water jet and one fireball simultaneously!
               const t1 = targets[0];
               t1._targeted = true;
-              const p1 = new pc.Entity('introWater');
-              p1.addComponent('render', { type: 'sphere', material: waterJetMat });
-              p1.setLocalScale(0.32, 0.32, 0.32);
-              p1.setPosition(-1.85, 2.0, 0.5);
-              root.addChild(p1);
-              introState.heroShots.push({ kind: 'water', x: -1.85, y: 2.0, speed: 15.0, target: t1, entity: p1 });
+              const ang1 = Math.atan2(t1.y - 2.0, t1.x - (-2.25));
+              if (introState.firefighter) {
+                if (introState.firefighter._bodyGroup) introState.firefighter._bodyGroup.setLocalEulerAngles(0, 34, 0);
+                if (introState.firefighter._arm) introState.firefighter._arm.setLocalEulerAngles(0, 0, (ang1 * 180) / Math.PI);
+              }
+              const sx1 = -2.25 + Math.cos(ang1) * 0.72;
+              const sy1 = 2.0 + Math.sin(ang1) * 0.72;
+              const b1 = createWaterBeamEntity(root);
+              updateWaterBeamVisual(b1, sx1, sy1, t1.x, t1.y, 0.08, 1.0);
+              introState.heroShots.push({ kind: 'waterBeam', sx: sx1, sy: sy1, tx: t1.x, ty: t1.y, age: 0, hitDone: false, target: t1, entity: b1 });
               SoundFX.playWater();
 
               if (targets.length > 1) {
                 const t2 = targets[1];
                 t2._targeted = true;
+                const ang2 = Math.atan2(t2.y - (-2.0), t2.x - (-2.25));
+                if (introState.mage) {
+                  if (introState.mage._bodyGroup) introState.mage._bodyGroup.setLocalEulerAngles(0, 34, 0);
+                  if (introState.mage._arm) introState.mage._arm.setLocalEulerAngles(0, 0, (ang2 * 180) / Math.PI);
+                }
+                const sx2 = -2.25 + Math.cos(ang2) * 0.78;
+                const sy2 = -2.0 + Math.sin(ang2) * 0.78;
                 const p2 = new pc.Entity('introFire');
                 p2.addComponent('render', { type: 'sphere', material: fireballMat });
                 p2.setLocalScale(0.36, 0.36, 0.36);
-                p2.setPosition(-1.85, -2.0, 0.5);
+                p2.setPosition(sx2, sy2, 0.5);
                 root.addChild(p2);
-                introState.heroShots.push({ kind: 'fireball', x: -1.85, y: -2.0, speed: 14.5, target: t2, entity: p2 });
+                introState.heroShots.push({ kind: 'fireball', x: sx2, y: sy2, speed: 14.5, target: t2, entity: p2 });
                 SoundFX.playFireball();
               }
             }
@@ -4498,9 +4777,35 @@
           }
         }
 
-        // Update Firefighter water jets & Mage fireballs
+        // Update Firefighter pressurized water beams & Mage fireballs
         for (let i = introState.heroShots.length - 1; i >= 0; i--) {
           const hs = introState.heroShots[i];
+          if (hs.kind === 'waterBeam') {
+            hs.age += dt;
+            if (!hs.hitDone && hs.target && hs.target.alive) {
+              hs.tx = hs.target.x;
+              hs.ty = hs.target.y;
+            }
+            const extendDur = 0.13;
+            const totalDur = 0.34;
+            const prog = Math.min(1.0, hs.age / extendDur);
+            const fade = hs.age <= extendDur ? 1.05 : Math.max(0.02, 1.0 - (hs.age - extendDur) / (totalDur - extendDur));
+            updateWaterBeamVisual(hs.entity, hs.sx, hs.sy, hs.tx, hs.ty, prog, fade);
+            if (hs.age >= extendDur && !hs.hitDone) {
+              hs.hitDone = true;
+              if (hs.target && hs.target.alive) {
+                hs.target.alive = false;
+                spawnParticles(hs.target.x, hs.target.y, waterJetMat, 11);
+                hs.target.entity.destroy();
+                SoundFX.playPop(3);
+              }
+            }
+            if (hs.age >= totalDur) {
+              hs.entity.destroy();
+              introState.heroShots.splice(i, 1);
+            }
+            continue;
+          }
           if (!hs.target || !hs.target.alive) {
             hs.entity.destroy();
             introState.heroShots.splice(i, 1);
@@ -4569,6 +4874,7 @@
 
       function pauseGame() {
         if (state.mode !== 'playing') return;
+        cancelActiveAim();
         state.mode = 'paused';
         SoundFX.setBgmDuck(true);
         modalPause.classList.remove('hidden');
@@ -4700,19 +5006,68 @@
           }
         }
 
-        // Aim guide dots
-        const showAim = state.mode === 'playing' && state.aimVisible;
-        for (let i = 0; i < aimDots.length; i++) {
-          const dot = aimDots[i];
-          dot.enabled = showAim;
-          if (showAim) {
-            const dist = 1.6 + i * 0.78 + ((state.elapsed * 2.2) % 0.78);
-            let px = SHOOTER_POS.x + Math.cos(state.aimAngle) * dist;
-            let py = SHOOTER_POS.y + Math.sin(state.aimAngle) * dist;
-            if (px > PLAYFIELD_HALF_W) px = PLAYFIELD_HALF_W - (px - PLAYFIELD_HALF_W);
-            else if (px < -PLAYFIELD_HALF_W) px = -PLAYFIELD_HALF_W - (px + PLAYFIELD_HALF_W);
-            dot.setPosition(px, py, 0.2);
+        // Aim guide dots (traced to first predicted pathogen hit, with wall bounce & glowing target reticle)
+        const showAim = state.mode === 'playing' && state.aimVisible && !state.aimCancelled;
+        if (showAim) {
+          const stepLen = 0.34;
+          const maxSteps = 54;
+          let rx = SHOOTER_POS.x + Math.cos(state.aimAngle) * 1.2;
+          let ry = SHOOTER_POS.y + Math.sin(state.aimAngle) * 1.2;
+          let rvx = Math.cos(state.aimAngle) * stepLen;
+          let rvy = Math.sin(state.aimAngle) * stepLen;
+          const rayPts = [{ x: rx, y: ry }];
+          let hitPt = null;
+
+          for (let st = 0; st < maxSteps; st++) {
+            rx += rvx;
+            ry += rvy;
+            if (rx > PLAYFIELD_HALF_W) {
+              rx = PLAYFIELD_HALF_W - (rx - PLAYFIELD_HALF_W);
+              rvx = -Math.abs(rvx);
+            } else if (rx < -PLAYFIELD_HALF_W) {
+              rx = -PLAYFIELD_HALF_W - (rx + PLAYFIELD_HALF_W);
+              rvx = Math.abs(rvx);
+            }
+            if (ry > 9.0) break;
+            rayPts.push({ x: rx, y: ry });
+
+            let hitFound = false;
+            for (let j = 0; j < state.train.length; j++) {
+              const bpt = sampleTrack(state.train[j].s);
+              if (Math.hypot(rx - bpt.x, ry - bpt.y) < BUBBLE_RADIUS * 1.85) {
+                hitPt = bpt;
+                hitFound = true;
+                break;
+              }
+            }
+            if (hitFound) break;
           }
+
+          const totalPts = rayPts.length;
+          for (let i = 0; i < aimDots.length; i++) {
+            const dot = aimDots[i];
+            const frac = (i + ((state.elapsed * 2.4) % 1)) / aimDots.length;
+            const pIdx = Math.min(totalPts - 1, Math.floor(frac * totalPts));
+            if (totalPts > 1 && pIdx < totalPts) {
+              dot.enabled = true;
+              dot.setPosition(rayPts[pIdx].x, rayPts[pIdx].y, 0.25);
+            } else {
+              dot.enabled = false;
+            }
+          }
+
+          if (hitPt) {
+            aimReticle.enabled = true;
+            aimReticle.setPosition(hitPt.x, hitPt.y, 0.35);
+            aimReticle.rotate(0, 0, safeDt * 120);
+            const rp = 0.96 + 0.1 * Math.sin(state.elapsed * 9);
+            aimReticle.setLocalScale(rp, rp, 1);
+          } else {
+            aimReticle.enabled = false;
+          }
+        } else {
+          for (let i = 0; i < aimDots.length; i++) aimDots[i].enabled = false;
+          aimReticle.enabled = false;
         }
 
         // Update particles
@@ -4882,9 +5237,24 @@
           const occ = sl.occupant;
           if (!occ) continue;
 
+          if (occ.aimHoldTimer > 0) {
+            occ.aimHoldTimer = Math.max(0, occ.aimHoldTimer - safeDt);
+          } else {
+            occ.targetYaw = 0;
+            occ.targetArmAngle = (occ.entity && occ.entity._baseArmAngle !== undefined) ? occ.entity._baseArmAngle : 20;
+          }
+          occ.curYaw += (occ.targetYaw - occ.curYaw) * Math.min(1, safeDt * 12);
+          // Shortest angular interpolation for arm
+          let dAng = ((occ.targetArmAngle - occ.curArmAngle + 540) % 360) - 180;
+          occ.curArmAngle += dAng * Math.min(1, safeDt * 14);
+          if (occ.entity && occ.entity._bodyGroup) {
+            occ.entity._bodyGroup.setLocalEulerAngles(0, occ.curYaw, 0);
+          }
           if (occ.entity && occ.entity._arm) {
-            const sw = Math.sin(state.elapsed * (occ.kind === 'isolation' ? 5.2 : 2.6) + sl.phase) * (occ.kind === 'isolation' ? 18 : 7);
-            occ.entity._arm.setLocalEulerAngles(0, 0, sw);
+            const idleSway = occ.aimHoldTimer > 0
+              ? Math.sin(state.elapsed * 22) * 3
+              : Math.sin(state.elapsed * (occ.kind === 'isolation' ? 5.2 : 2.6) + sl.phase) * (occ.kind === 'isolation' ? 14 : 6);
+            occ.entity._arm.setLocalEulerAngles(0, 0, occ.curArmAngle + idleSway);
           }
 
           if (occ.kind === 'handwash') {
@@ -4913,6 +5283,7 @@
                 if (item._releasedBy && item._releasedBy[sl.id]) continue;
                 const pt = sampleTrack(item.s);
                 if (Math.hypot(pt.x - sl.x, pt.y - sl.y) <= ISOLATION_CAPTURE_RANGE) {
+                  aimDefenderToward(sl, pt.x, pt.y);
                   state.train.splice(j, 1);
                   occ.isolatedCres.push(item);
                   SoundFX.playIsolate();
@@ -4953,9 +5324,37 @@
           }
         }
 
-        // --- Update Defender Projectiles (Water Jet & Fireball) ---
+        // --- Update Defender Projectiles (Pressurized Water Stream & Fireball) ---
         for (let i = state.defenderProjectiles.length - 1; i >= 0; i--) {
           const dp = state.defenderProjectiles[i];
+          if (dp.kind === 'waterBeam') {
+            dp.age += safeDt;
+            if (!dp.hitDone && state.train.indexOf(dp.targetItem) !== -1) {
+              const tpt = sampleTrack(dp.targetItem.s);
+              dp.tx = tpt.x;
+              dp.ty = tpt.y;
+            }
+            const extendDur = 0.13;
+            const totalDur = 0.36;
+            const progress = Math.min(1.0, dp.age / extendDur);
+            const fade = dp.age <= extendDur ? (0.9 + 0.2 * Math.sin(dp.age * 60)) : Math.max(0.02, 1.0 - (dp.age - extendDur) / (totalDur - extendDur));
+            updateWaterBeamVisual(dp.entity, dp.sx, dp.sy, dp.tx, dp.ty, progress, fade);
+
+            if (dp.age >= extendDur && !dp.hitDone) {
+              dp.hitDone = true;
+              if (state.train.indexOf(dp.targetItem) !== -1) {
+                eliminateSingleByDefender(dp.targetItem, 'water');
+              } else {
+                spawnParticles(dp.tx, dp.ty, waterJetMat, 6);
+              }
+            }
+            if (dp.age >= totalDur) {
+              dp.entity.destroy();
+              state.defenderProjectiles.splice(i, 1);
+            }
+            continue;
+          }
+
           if (state.train.indexOf(dp.targetItem) === -1) {
             dp.entity.destroy();
             state.defenderProjectiles.splice(i, 1);
