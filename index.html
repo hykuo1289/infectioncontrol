@@ -174,6 +174,140 @@
       transform: scale(0.92);
     }
 
+    .icon-btn.coin-btn {
+      background: rgba(255, 209, 102, 0.18);
+      border-color: rgba(255, 209, 102, 0.55);
+      color: #ffe066;
+    }
+
+    .icon-btn.coin-btn.active {
+      background: linear-gradient(135deg, #ffd166, #ff9f1c);
+      color: #191030;
+      border-color: #ffffff;
+      box-shadow: 0 0 14px rgba(255, 209, 102, 0.75);
+    }
+
+    #deploy-mode-banner {
+      display: none;
+      flex: 0 0 auto;
+      width: 100%;
+      padding: 7px 12px;
+      background: linear-gradient(90deg, rgba(24, 34, 78, 0.98), rgba(34, 28, 72, 0.98));
+      border-top: 1.5px solid rgba(255, 209, 102, 0.72);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      align-items: center;
+      justify-content: center;
+      z-index: 26;
+    }
+
+    #deploy-mode-banner.active {
+      display: flex;
+    }
+
+    #deploy-mode-inner {
+      width: min(100%, 540px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .deploy-banner-text {
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff3c4;
+      line-height: 1.3;
+    }
+
+    #btn-exit-deploy {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #4ef2a8, #2ec4ff);
+      color: #101630;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Interactive Tutorial UI — dedicated flex bar between playfield & weapons (zero overlap!) */
+    #tut-banner {
+      display: none;
+      flex: 0 0 auto;
+      width: 100%;
+      padding: 7px 12px;
+      background: linear-gradient(90deg, rgba(18, 38, 86, 0.98), rgba(26, 46, 102, 0.98));
+      border-top: 1.5px solid rgba(110, 224, 255, 0.65);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 27;
+    }
+
+    #tut-banner.active {
+      display: flex;
+    }
+
+    #tut-banner-inner {
+      width: min(100%, 540px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    #tut-banner-text {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.38;
+      text-align: left;
+    }
+
+    #btn-tut-abort {
+      flex: 0 0 auto;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.12);
+      color: #e6ecff;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    #btn-tut-abort:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .tut-highlight {
+      animation: tutGlowPulse 0.75s infinite alternate !important;
+      border-color: #ffe066 !important;
+      box-shadow: 0 0 22px rgba(255, 214, 70, 0.95), inset 0 0 10px rgba(255, 235, 130, 0.45) !important;
+      z-index: 5 !important;
+    }
+
+    @keyframes tutGlowPulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.1); }
+    }
+
+    .tut-tip-box {
+      text-align: left;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 11px 13px;
+      margin: 10px 0 16px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #eef3ff;
+    }
+
     /* Weapon Switch Floating Banner */
     #aim-cancel-hint {
       position: absolute;
@@ -1268,6 +1402,10 @@
             <span class="stat-value accent" id="ui-score">0</span>
           </div>
           <div class="stat-pill">
+            <span class="stat-label">連鎖分</span>
+            <span class="stat-value" style="color:#7ce2ff;" id="ui-chain-score">0</span>
+          </div>
+          <div class="stat-pill">
             <span class="stat-label">金錢</span>
             <span class="stat-value gold" id="ui-gold">50</span>
           </div>
@@ -1289,14 +1427,17 @@
 
         <div class="hud-actions">
           <button class="icon-btn" id="btn-mute" title="音效開關" aria-label="音效開關">🔊</button>
+          <button class="icon-btn coin-btn" id="btn-deploy-mode" title="設定防禦角色（暫停）" aria-label="設定防禦角色">🪙</button>
           <button class="icon-btn" id="btn-pause" title="暫停" aria-label="暫停">⏸</button>
         </div>
       </div>
 
       <div id="danger-banner">⚠️ 病原體快抵達終點了！</div>
+
+
       <div id="amr-lockout-banner">
-        <div class="amr-lockout-title">⚠️ 抗生素使用過度，抗藥性失控</div>
-        <div class="amr-lockout-sub" id="amr-lockout-timer">20.0 秒無法使用抗生素（仍可使用 Tamiflu）</div>
+        <div class="amr-lockout-title">⚠️ 抗生素使用過量，產生抗藥性，暫停使用10秒</div>
+        <div class="amr-lockout-sub" id="amr-lockout-timer">10.0 秒無法使用抗生素（仍可使用 Tamiflu）</div>
       </div>
 
       <!-- Vertical AMR Pressure Gauge -->
@@ -1330,6 +1471,27 @@
         </div>
       </div>
 
+      <!-- Post-Intro Tutorial Choice Modal -->
+      <div class="modal-backdrop hidden" id="modal-tut-choice">
+        <div class="modal-card">
+          <div class="title-badge">INTERACTIVE TUTORIAL • 新手教學</div>
+          <h1>微生物防治大作戰</h1>
+          <p class="modal-sub">歡迎加入感染管制團隊！建議先體驗 1 分鐘互動教學，實際操作 7 種病原體用藥、抗藥壓力量表、防禦角色配置與連鎖消除技巧。</p>
+          <button type="button" class="primary-btn" id="btn-enter-tutorial">🎓 進入教學模式</button>
+          <button type="button" class="secondary-btn" id="btn-skip-tutorial">跳過教學，直接開始第 1 關</button>
+        </div>
+      </div>
+
+      <!-- Tutorial Step Info / Tip Modal -->
+      <div class="modal-backdrop hidden" id="modal-tut-tip">
+        <div class="modal-card">
+          <div class="title-badge" id="tut-tip-badge">教學提示</div>
+          <h2 id="tut-tip-title">抗藥性警報</h2>
+          <div class="tut-tip-box" id="tut-tip-body"></div>
+          <button type="button" class="primary-btn" id="btn-tut-tip-next">繼續</button>
+        </div>
+      </div>
+
       <!-- Start / Stage Briefing Modal -->
       <div class="modal-backdrop" id="modal-start">
         <div class="modal-card">
@@ -1342,7 +1504,7 @@
           <div class="controls-box">
             <div class="control-item">
               <span>🖱️📱</span>
-              <div><strong>操作：</strong>點擊下方武器換藥；<strong>按住畫面拖曳瞄準、放開才發射</strong>（拖回砲台下方可取消）；點擊地圖圓圈部署防禦角色。</div>
+              <div><strong>操作：</strong>點擊下方武器換藥，按住拖曳瞄準、放開射出；按上方 <strong>🪙 金錢鈕</strong> 暫停並點擊圓圈設置或撤除（退還 20 金）防禦角色。</div>
             </div>
             <div class="control-item">
               <span>🪙</span>
@@ -1351,6 +1513,7 @@
           </div>
           <button class="primary-btn" id="btn-start">開始遊戲</button>
           <button type="button" class="replay-intro-btn" id="btn-replay-intro">🎬 重播開場動畫</button>
+          <button type="button" class="replay-intro-btn" id="btn-open-tutorial-from-start">🎓 進入互動教學模式</button>
         </div>
       </div>
 
@@ -1393,8 +1556,8 @@
                 </svg>
               </div>
               <div class="defender-meta">
-                <div class="defender-title" style="color:#9ad8ff;">接觸隔離 <span class="defender-badge">攔截 CRE</span><span class="defender-cost" id="cost-isolation">🪙 20 金</span></div>
-                <div class="defender-desc">指揮家攔下路過的 CRE，集滿 3 顆或無其他病原體時一起放出。</div>
+                <div class="defender-title" style="color:#9ad8ff;">接觸隔離 <span class="defender-badge">每 30 秒消化</span><span class="defender-cost" id="cost-isolation">🪙 20 金</span></div>
+                <div class="defender-desc">最多同時抓住 3 隻 CRE，每 30 秒消化 1 隻（+1 金）；滿 3 隻又遇新 CRE 時放出 2 隻合流成 3 隻，留 1 隻繼續消化。</div>
               </div>
             </button>
 
@@ -1415,7 +1578,7 @@
               </div>
             </button>
           </div>
-          <button type="button" class="danger-btn hidden" id="btn-remove-defender">撤離此格防禦角色</button>
+          <button type="button" class="danger-btn hidden" id="btn-remove-defender">撤除防禦角色（退還 20 金）</button>
           <button type="button" class="secondary-btn" id="btn-cancel-defender">取消</button>
         </div>
       </div>
@@ -1439,17 +1602,41 @@
           <p class="modal-sub" id="end-sub">所有病原體皆已清除完畢。</p>
           <div class="score-summary">
             <div class="summary-cell">
-              <div class="s-lbl">目前分數</div>
+              <div class="s-lbl">一般分數</div>
               <div class="s-val" id="end-score">0</div>
             </div>
             <div class="summary-cell">
-              <div class="s-lbl">最高紀錄</div>
+              <div class="s-lbl">最高一般分</div>
               <div class="s-val" id="end-best">0</div>
+            </div>
+            <div class="summary-cell">
+              <div class="s-lbl">完成連鎖次數</div>
+              <div class="s-val" id="end-chains">0 次</div>
+            </div>
+            <div class="summary-cell">
+              <div class="s-lbl">連鎖分數</div>
+              <div class="s-val" style="color:#7ce2ff;" id="end-chain-bonus">0</div>
             </div>
           </div>
           <button class="primary-btn" id="btn-end-primary">下一關</button>
           <button class="secondary-btn" id="btn-end-restart">重新挑戰第 1 關</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Dedicated Deploy Mode Bar (never covers the 6 defense circles) -->
+    <div id="deploy-mode-banner">
+      <div id="deploy-mode-inner">
+        <div class="deploy-banner-text">🪙 防禦配置模式（已暫停）— 點擊發光圓圈設置或撤除（退還 20 金）</div>
+        <button type="button" id="btn-exit-deploy">繼續遊戲</button>
+      </div>
+    </div>
+
+    <!-- Dedicated Tutorial Guide Bar (never covers bacteria or weapons) -->
+    <div id="tut-banner">
+      <div id="tut-banner-inner">
+        <div id="tut-banner-text">教學引導中...</div>
+        <button type="button" id="btn-tut-abort">跳過教學</button>
       </div>
     </div>
 
@@ -1687,7 +1874,7 @@
           endlessStageCounts = Object.assign({}, STAGE_4_BASE_COUNTS);
           return {
             title: '第 4 關：CRE 危機',
-            story: '使用Zavicefta 對抗CRE，使用「接觸隔離」，阻止CRE的進攻吧，要注意濫用抗生素會產生抗藥性危機',
+            story: '使用Zavicefta 對抗CRE，使用「接觸隔離」，阻止CRE的進攻吧，接觸隔離可以擋住CRE，每30秒消化一隻，也可以集中CRE讓我們一次消滅，要注意濫用抗生素會產生抗藥性危機',
             counts: Object.assign({}, STAGE_4_BASE_COUNTS),
             weapons: [0, 1, 2, 3, 4, 5, 6],
             defenders: ['handwash', 'bundle', 'isolation'],
@@ -2148,6 +2335,11 @@
           tx: a.tx + (b.tx - a.tx) * f,
           ty: a.ty + (b.ty - a.ty) * f
         };
+      }
+
+      function getTrainItemPos(item) {
+        if (item && item.fixedPos) return item.fixedPos;
+        return sampleTrack(item.s);
       }
 
       /* ============================================================
@@ -3205,6 +3397,10 @@
       aimReticle.enabled = false;
       app.root.addChild(aimReticle);
 
+      const tutTargetRing = createRuneRing('tutTargetRing', 0.78, 14, 0.13, goldTrimMat, null);
+      tutTargetRing.enabled = false;
+      app.root.addChild(tutTargetRing);
+
       /* ============================================================
          5. GAME STATE
       ============================================================ */
@@ -3214,6 +3410,8 @@
         score: 0,
         gold: 50,
         bestScore: 0,
+        chainCount: 0,
+        chainBonusTotal: 0,
         clearedCount: 0,
         quota: 50,
         baseSpeed: 1.08,
@@ -3267,6 +3465,7 @@
          6. UI ELEMENTS & WEAPON DOCK
       ============================================================ */
       const uiScore = document.getElementById('ui-score');
+      const uiChainScore = document.getElementById('ui-chain-score');
       const uiGold = document.getElementById('ui-gold');
       const uiStage = document.getElementById('ui-stage');
       const pickerGoldVal = document.getElementById('picker-gold-val');
@@ -3309,6 +3508,15 @@
       const stageBriefPathogens = document.getElementById('stage-brief-pathogens');
       const btnStartEl = document.getElementById('btn-start');
       const btnReplayIntro = document.getElementById('btn-replay-intro');
+      const btnOpenTutFromStart = document.getElementById('btn-open-tutorial-from-start');
+      const modalTutChoice = document.getElementById('modal-tut-choice');
+      const modalTutTip = document.getElementById('modal-tut-tip');
+      const tutTipBadge = document.getElementById('tut-tip-badge');
+      const tutTipTitle = document.getElementById('tut-tip-title');
+      const tutTipBody = document.getElementById('tut-tip-body');
+      const btnTutTipNext = document.getElementById('btn-tut-tip-next');
+      const tutBanner = document.getElementById('tut-banner');
+      const tutBannerText = document.getElementById('tut-banner-text');
       const introOverlay = document.getElementById('intro-overlay');
       const introCaption = document.getElementById('intro-caption');
       const introTitleCard = document.getElementById('intro-title-card');
@@ -3325,12 +3533,17 @@
       const endSub = document.getElementById('end-sub');
       const endScore = document.getElementById('end-score');
       const endBest = document.getElementById('end-best');
+      const endChains = document.getElementById('end-chains');
+      const endChainBonus = document.getElementById('end-chain-bonus');
+      const btnDeployMode = document.getElementById('btn-deploy-mode');
+      const deployModeBanner = document.getElementById('deploy-mode-banner');
       const btnEndPrimary = document.getElementById('btn-end-primary');
 
 
 
       function updateHUD() {
         uiScore.textContent = String(state.score);
+        uiChainScore.textContent = String(state.chainBonusTotal);
         uiGold.textContent = String(state.gold);
         uiStage.textContent = String(state.stage);
         const shownCleared = Math.min(state.clearedCount, state.quota);
@@ -3561,6 +3774,7 @@
 
         btnStartEl.textContent = stageNum === 1 ? '開始遊戲' : ('開始第 ' + stageNum + ' 關');
         btnReplayIntro.classList.toggle('hidden', stageNum !== 1);
+        btnOpenTutFromStart.classList.toggle('hidden', stageNum !== 1);
       }
 
       function clearDynamicEntities() {
@@ -3593,6 +3807,8 @@
         state.stage = stageNum;
         if (resetScore) {
           state.score = 0;
+          state.chainCount = 0;
+          state.chainBonusTotal = 0;
           endlessStageCounts = null;
         }
         state.gold = 50;
@@ -3687,22 +3903,117 @@
         spawnFloatingText(slot.x, slot.y + 0.55, reasonText || ('隔離放出 CRE×' + count), '#9ad8ff', 17);
       }
 
+      function countDeployedDefenders(kind) {
+        let count = 0;
+        for (let i = 0; i < defenseSlots.length; i++) {
+          if (defenseSlots[i].occupant && defenseSlots[i].occupant.kind === kind) {
+            count++;
+          }
+        }
+        return count;
+      }
+
+      function enterDeployMode() {
+        if (state.mode !== 'playing') return;
+        cancelActiveAim();
+
+        if (tutState.active && tutState.phase === 2 && tutState.phase2Sub === 'clickCoin') {
+          tutState.phase2Sub = 'placeDefender';
+          btnDeployMode.classList.remove('tut-highlight');
+          const sc = tutState.phase2Scene;
+          let badge, title, body, nextPrompt;
+          if (sc === 1) {
+            badge = '防禦教學 1/3 • 洗手';
+            title = '🚒 洗手（紅衣消防員）';
+            body = '<p style="margin:0;">「洗手」會<strong>每 4 秒隨機噴出高壓水柱，消滅射程內 1 隻細菌或病毒</strong>！<br/>接下來請點擊細菌旁金色發亮的圓圈，設置 1 隻「洗手」，再按「繼續遊戲」觀察 9 秒鐘。</p>';
+            nextPrompt = '請點擊細菌旁金色發亮的圓圈設置「洗手」，設好後按「繼續遊戲」！';
+          } else if (sc === 2) {
+            badge = '防禦教學 2/3 • 組合式照護';
+            title = '🧙‍♀️ 組合式照護（女魔法師）';
+            body = '<p style="margin:0;">「組合式照護」會<strong>每 6 秒發射火球消滅 1 隻細菌，優先選擇單獨落單且高抗藥性的細菌</strong>（CRE→ESBL→MRSA→綠膿→葡萄→大腸→非落單菌）！<br/>請點擊細菌旁金色發亮的圓圈設置 1 隻「組合式照護」，再按「繼續遊戲」觀察 14 秒鐘。</p>';
+            nextPrompt = '請點擊細菌旁金色發亮的圓圈設置「組合式照護」，設好後按「繼續遊戲」！';
+          } else {
+            badge = '防禦教學 3/3 • 接觸隔離';
+            title = '🎼 接觸隔離（指揮家）';
+            body = '<p style="margin:0;">場上有 <strong>5 隻被其他細菌隔開的 CRE</strong>！「接觸隔離」最多可同時抓住 3 隻 CRE（每 30 秒消化 1 隻），<strong>當抓住 3 隻後又有第 4 隻 CRE 路過時，會放出 2 隻與第 4 隻合流成 3 隻排在一起</strong>！<br/>請點擊下一個路過的金色發亮圓圈設置「接觸隔離」，再按「繼續遊戲」觀察！</p>';
+            nextPrompt = '請點擊下一個路過的金色發亮圓圈設置「接觸隔離」，設好後按「繼續遊戲」！';
+          }
+          showTutTipModal(badge, title, body, '開始設置角色', () => {
+            state.mode = 'deploy';
+            btnDeployMode.classList.add('active');
+            deployModeBanner.classList.add('active');
+            handleResize();
+            tutBannerText.textContent = nextPrompt;
+          });
+          return;
+        }
+
+        state.mode = 'deploy';
+        btnDeployMode.classList.add('active');
+        deployModeBanner.classList.add('active');
+        handleResize();
+        SoundFX.setBgmDuck(true);
+        SoundFX.playSwitch();
+      }
+
+      function exitDeployMode() {
+        if (tutState.active && tutState.phase === 2 && tutState.phase2Sub === 'placeDefender') {
+          const totalDeployed = defenseSlots.filter((sl) => Boolean(sl.occupant)).length;
+          if (totalDeployed === 0) {
+            SoundFX.playMiss();
+            tutBannerText.textContent = '請先點擊金色發亮的圓圈部署防禦角色，再按「繼續遊戲」喔！';
+            return;
+          }
+          tutState.phase2Sub = 'runningDemo';
+          if (tutState.phase2Scene === 1) tutState.demoTimer = 9.0;
+          else if (tutState.phase2Scene === 2) tutState.demoTimer = 14.0;
+          else tutState.demoTimer = 20.0;
+        }
+
+        modalDefender.classList.add('hidden');
+        state.activePickerSlotId = -1;
+        btnDeployMode.classList.remove('active');
+        deployModeBanner.classList.remove('active');
+        handleResize();
+        if (state.mode === 'deploy' || state.mode === 'picking') {
+          state.mode = 'playing';
+          SoundFX.setBgmDuck(false);
+        }
+      }
+
       function deployDefenderToSlot(slotId, kind) {
         const slot = defenseSlots[slotId];
         if (!slot) return false;
 
-        if (kind) {
-          if (slot.occupant && slot.occupant.kind === kind) {
-            return true; // already deployed here, no extra charge
+        // Removing an existing defender refunds 20 gold!
+        if (!kind) {
+          if (!slot.occupant) return true;
+          if (slot.occupant.kind === 'isolation') {
+            releaseIsolatedCres(slot, '撤除釋放 CRE');
           }
-          const cost = getDefenderCost(kind);
-          if (state.gold < cost) {
-            SoundFX.playMiss();
-            pickerWarnEl.textContent = '金錢不足！部署「' + DEFENDER_NAMES[kind] + '」需要 ' + cost + ' 金。';
-            return false;
-          }
-          state.gold -= cost;
+          if (slot.occupant.entity) slot.occupant.entity.destroy();
+          slot.occupant = null;
+          slot.plusH.enabled = true;
+          slot.plusV.enabled = true;
+          state.gold += 20;
           updateHUD();
+          SoundFX.playSwitch();
+          spawnFloatingText(slot.x, slot.y + 0.55, '撤除退還 +20金', '#ffe066', 17);
+          return true;
+        }
+
+        // Already same defender in this slot
+        if (slot.occupant && slot.occupant.kind === kind) {
+          return true;
+        }
+
+        // If replacing an occupied slot, count the +20 gold refund from removing the old one
+        const refund = slot.occupant ? 20 : 0;
+        const cost = getDefenderCost(kind);
+        if (state.gold + refund < cost) {
+          SoundFX.playMiss();
+          pickerWarnEl.textContent = '金錢不足！部署「' + DEFENDER_NAMES[kind] + '」需要 ' + cost + ' 金。';
+          return false;
         }
 
         if (slot.occupant) {
@@ -3711,13 +4022,11 @@
           }
           if (slot.occupant.entity) slot.occupant.entity.destroy();
           slot.occupant = null;
+          state.gold += refund;
         }
 
-        if (!kind) {
-          slot.plusH.enabled = true;
-          slot.plusV.enabled = true;
-          return true;
-        }
+        state.gold -= cost;
+        updateHUD();
 
         const model = createDefenderModel(kind);
         slot.entity.addChild(model);
@@ -3727,6 +4036,7 @@
         slot.occupant = {
           kind,
           cooldown: kind === 'handwash' ? 0.8 : (kind === 'bundle' ? 1.2 : 0),
+          digestTimer: 0,
           entity: model,
           isolatedCres: [],
           animTimer: 0,
@@ -3737,9 +4047,9 @@
           aimHoldTimer: 0
         };
 
-        const paidCost = getDefenderCost(kind) - 10;
         SoundFX.playSwitch();
-        spawnFloatingText(slot.x, slot.y + 0.55, '部署 ' + DEFENDER_NAMES[kind] + ' (-' + paidCost + '金)', '#4ef2a8', 16);
+        const netTxt = refund > 0 ? (' (-' + cost + ' +' + refund + '金)') : (' (-' + cost + '金)');
+        spawnFloatingText(slot.x, slot.y + 0.55, '部署 ' + DEFENDER_NAMES[kind] + netTxt, '#4ef2a8', 16);
         return true;
       }
 
@@ -3752,22 +4062,22 @@
         pickerGoldVal.textContent = String(state.gold);
         pickerWarnEl.textContent = '';
         const currentKind = slot.occupant ? slot.occupant.kind : null;
+        const refund = currentKind ? 20 : 0;
         modalDefender.querySelectorAll('.defender-option').forEach((btn) => {
           const kind = btn.dataset.defender;
           const isUnlocked = state.unlockedDefenders.indexOf(kind) !== -1;
           btn.classList.toggle('locked-stage', !isUnlocked);
           if (!isUnlocked) return;
-          const isCur = kind === currentKind;
+          const isCur = (kind === currentKind);
           const cost = getDefenderCost(kind);
           const costSpan = document.getElementById('cost-' + kind);
           if (costSpan) {
             costSpan.textContent = isCur ? '已部署' : ('🪙 ' + cost + ' 金');
           }
           btn.classList.toggle('current', isCur);
-          btn.classList.toggle('unaffordable', !isCur && state.gold < cost);
+          btn.classList.toggle('unaffordable', !isCur && (state.gold + refund) < cost);
         });
         btnRemoveDefender.classList.toggle('hidden', !currentKind);
-        SoundFX.setBgmDuck(true);
         modalDefender.classList.remove('hidden');
       }
 
@@ -3775,8 +4085,7 @@
         modalDefender.classList.add('hidden');
         state.activePickerSlotId = -1;
         if (state.mode === 'picking') {
-          state.mode = 'playing';
-          SoundFX.setBgmDuck(false);
+          state.mode = 'deploy';
         }
       }
 
@@ -3954,7 +4263,7 @@
 
         const targetType = hitItem.type;
         const effect = getAttackEffect(weaponId, targetType);
-        const hitPos = sampleTrack(hitItem.s);
+        const hitPos = getTrainItemPos(hitItem);
 
         if (effect === 'none') {
           SoundFX.playMiss();
@@ -3976,6 +4285,7 @@
           updateHUD();
           SoundFX.playSingleKill();
           spawnFloatingText(hitPos.x, hitPos.y, '單顆清除 +1分 +1金', '#ff9aa8', 17);
+          if (tutState.active) onTutorialPathogenKilled();
 
 
           return;
@@ -3997,7 +4307,7 @@
         let avgX = 0;
         let avgY = 0;
         for (let i = left; i <= right; i++) {
-          const p = sampleTrack(state.train[i].s);
+          const p = getTrainItemPos(state.train[i]);
           avgX += p.x;
           avgY += p.y;
           spawnParticles(p.x, p.y, pathogenParticleMats[targetType], 9);
@@ -4008,6 +4318,12 @@
 
         state.train.splice(left, count);
 
+        const chainBonus = count >= 3 ? (count - 2) : 0;
+        if (chainBonus > 0) {
+          state.chainCount += 1;
+          state.chainBonusTotal += chainBonus;
+        }
+        // General score & chain score are tracked separately
         state.score += count;
         state.gold += count;
         state.clearedCount += count;
@@ -4016,13 +4332,21 @@
         SoundFX.playPop(count);
 
         const pInfo = PATHOGENS[targetType];
-        const label = count >= 2
-          ? pInfo.name + ' ×' + count + ' (+' + count + '分 +' + count + '金)'
-          : pInfo.name + '清除 +1分 +1金';
-        spawnFloatingText(avgX, avgY, label, count >= 3 ? '#ffd166' : pInfo.hex, count >= 3 ? 19 : 17);
+        let label;
+        if (chainBonus > 0) {
+          label = pInfo.name + ' ×' + count + ' (+' + count + '分・連鎖+' + chainBonus + '分・+' + count + '金)';
+        } else if (count >= 2) {
+          label = pInfo.name + ' ×' + count + ' (+' + count + '分 +' + count + '金)';
+        } else {
+          label = pInfo.name + '清除 +1分 +1金';
+        }
+        spawnFloatingText(avgX, avgY, label, chainBonus > 0 ? '#ffd166' : pInfo.hex, chainBonus > 0 ? 20 : 17);
 
         if (count >= 3) {
           state.pushbackTimer = Math.min(1.0, state.pushbackTimer + 0.42);
+        }
+        if (tutState.active) {
+          onTutorialPathogenKilled();
         }
 
 
@@ -4055,19 +4379,45 @@
         if (state.shootCooldown > 0) return;
 
         const weapon = WEAPONS[state.selectedWeapon];
+
+        // In Tutorial Phase 1 / Phase 2 / Phase 3, guide the player to use the highlighted weapon
+        if (tutState.active) {
+          if (tutState.phase === 1) {
+            const step = TUT_PHASE1_STEPS[tutState.stepIdx];
+            if (step && state.selectedWeapon !== step.weapon) {
+              SoundFX.playMiss();
+              spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.4, '請先選擇發亮的「' + WEAPONS[step.weapon].name + '」', '#ffe066', 16);
+              return;
+            }
+          } else if (tutState.phase === 2) {
+            if (tutState.phase2Sub === 'clickCoin') {
+              SoundFX.playMiss();
+              spawnFloatingText(0, 4.2, '請先點擊上方發亮的「🪙」按鈕！', '#ffe066', 17);
+            }
+            return;
+          } else if (tutState.phase === 3) {
+            const neededW = tutState.phase3Sub === 'clearVirus' ? 0 : 6;
+            if (state.selectedWeapon !== neededW) {
+              SoundFX.playMiss();
+              spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.4, '請先選擇發亮的「' + WEAPONS[neededW].name + '」', '#ffe066', 16);
+              return;
+            }
+          }
+        }
+
         if (state.amrLockoutTimer > 0 && weapon.isAntibiotic) {
           SoundFX.playMiss();
-          spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.35, '抗生素停用中 (' + Math.ceil(state.amrLockoutTimer) + 's)', '#ff6b81', 16);
+          spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.35, '抗生素暫停使用中 (' + Math.ceil(state.amrLockoutTimer) + 's)', '#ff6b81', 16);
           return;
         }
 
-        if (weapon.amrCost > 0) {
+        if (weapon.amrCost > 0 && !(tutState.active && tutState.phase === 3)) {
           state.amrValue += weapon.amrCost;
-          if (state.amrValue > 20) {
-            state.amrLockoutTimer = 20.0;
+          if (state.amrValue > 20 && state.amrLockoutTimer <= 0) {
+            state.amrLockoutTimer = 10.0;
             SoundFX.startBgm('crisis');
             SoundFX.playAmrOverload();
-            spawnFloatingText(0, 1.5, '抗生素使用過度，抗藥性失控！', '#ff3b5c', 22);
+            spawnFloatingText(0, 1.5, '抗生素使用過量，產生抗藥性，暫停使用10秒', '#ff3b5c', 20);
           }
           updateAmrUI();
         }
@@ -4109,20 +4459,23 @@
       }
 
       canvas.addEventListener('pointerdown', (ev) => {
-        if (state.mode !== 'playing') return;
         if (ev.button !== undefined && ev.button !== 0 && ev.pointerType === 'mouse') return;
         SoundFX.ensure();
         const w = screenToWorld(ev.clientX, ev.clientY);
 
-        // Tap on any of the 6 defense circles opens the defender picker immediately
-        for (let i = 0; i < defenseSlots.length; i++) {
-          const sl = defenseSlots[i];
-          if (Math.hypot(w.x - sl.x, w.y - sl.y) <= sl.radius + 0.24) {
-            cancelActiveAim();
-            openDefenderPicker(sl.id);
-            return;
+        // Only in Deploy Mode (triggered by the top Gold Coin button) do circles open the defender setup screen!
+        if (state.mode === 'deploy') {
+          for (let i = 0; i < defenseSlots.length; i++) {
+            const sl = defenseSlots[i];
+            if (Math.hypot(w.x - sl.x, w.y - sl.y) <= sl.radius + 0.34) {
+              openDefenderPicker(sl.id);
+              return;
+            }
           }
+          return;
         }
+
+        if (state.mode !== 'playing') return;
 
         // Start press-and-drag aiming (fires on release!)
         state.isAiming = true;
@@ -4195,6 +4548,7 @@
       window.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape' || ev.key === 'p' || ev.key === 'P') {
           if (state.mode === 'picking') closeDefenderPicker();
+          else if (state.mode === 'deploy') exitDeployMode();
           else if (state.mode === 'playing') pauseGame();
           else if (state.mode === 'paused') resumeGame();
           return;
@@ -4215,6 +4569,8 @@
         saveBestScore();
         endScore.textContent = String(state.score);
         endBest.textContent = String(state.bestScore);
+        endChains.textContent = state.chainCount + ' 次';
+        endChainBonus.textContent = String(state.chainBonusTotal);
         if (isWin) {
           endBadge.textContent = 'STAGE ' + state.stage + ' CLEAR!';
           endTitle.textContent = '感染控制成功！';
@@ -4406,7 +4762,9 @@
       function finishIntro() {
         SoundFX.stopBgm();
         cleanupIntro();
-        initStage(1, true, true);
+        initStage(1, true, false);
+        state.mode = 'tutChoice';
+        modalTutChoice.classList.remove('hidden');
       }
 
       function startIntro() {
@@ -4415,6 +4773,9 @@
         modalStart.classList.add('hidden');
         modalPause.classList.add('hidden');
         modalDefender.classList.add('hidden');
+        btnDeployMode.classList.remove('active');
+        deployModeBanner.classList.remove('active');
+        handleResize();
         modalEnd.classList.add('hidden');
 
         // Hide main zigzag battlefield so the 3-act theater plays on a clean stage
@@ -4852,11 +5213,304 @@
         }
       }
 
+      /* ============================================================
+         INTERACTIVE TUTORIAL CONTROLLER (3 PHASES)
+      ============================================================ */
+      const TUT_PHASE1_STEPS = [
+        { type: 0, weapon: 0, label: '步驟 1/7：選擇發亮的「Tamiflu」，然後瞄準射擊發亮的「流感病毒」（抗藥 +0）！' },
+        { type: 2, weapon: 1, label: '步驟 2/7：選擇發亮的「Cefazolin」，然後射擊發亮的「大腸桿菌」（抗藥 +1）！' },
+        { type: 1, weapon: 2, label: '步驟 3/7：選擇發亮的「Oxacillin」，然後射擊發亮的「葡萄球菌」（抗藥 +1）！' },
+        { type: 3, weapon: 3, label: '步驟 4/7：選擇發亮的「Ciprofloxacin」，然後射擊發亮的「綠膿桿菌」（抗藥 +5）！' },
+        { type: 4, weapon: 4, label: '步驟 5/7：選擇發亮的「Vancomycin」，然後射擊發亮的「MRSA（金盾）」（抗藥 +5）！' },
+        { type: 5, weapon: 5, label: '步驟 6/7：選擇發亮的「Ertapenem」，然後射擊發亮的「ESBL（銀盾）」（抗藥 +5）！' },
+        { type: 6, weapon: 6, label: '步驟 7/7：選擇發亮的「Zavicefta」，射擊發亮的「CRE（金光＋金盾）」（抗藥 +10，觀察量表）！' }
+      ];
+
+      const tutState = {
+        active: false,
+        phase: 0,        // 1: 7 static pathogens, 2: 3 defender scenes (handwash/bundle/isolation), 3: 5 CRE + 4 virus chain
+        stepIdx: 0,
+        phase2Scene: 1,  // 1: 洗手(9s), 2: 組合式照護(14s), 3: 接觸隔離(攔3放2合流成3)
+        phase2Sub: 'clickCoin', // 'clickCoin' | 'placeDefender' | 'runningDemo'
+        targetSlotId: 1,
+        demoTimer: 0,
+        isoOverflowDone: false,
+        isoPostTimer: 0,
+        phase3Sub: 'clearVirus', // 'clearVirus' | 'clearCre'
+        onTipConfirm: null
+      };
+
+      function clearTutHighlights() {
+        colorOrbsEl.querySelectorAll('.weapon-btn').forEach((b) => b.classList.remove('tut-highlight'));
+        btnDeployMode.classList.remove('tut-highlight');
+        tutTargetRing.enabled = false;
+      }
+
+      function highlightTutWeapon(weaponId) {
+        colorOrbsEl.querySelectorAll('.weapon-btn').forEach((b) => {
+          const idx = parseInt(b.dataset.weaponIndex, 10);
+          b.classList.toggle('tut-highlight', idx === weaponId);
+        });
+      }
+
+      function showTutTipModal(badge, title, htmlBody, btnText, onNext) {
+        cancelActiveAim();
+        state.mode = 'tutTip';
+        tutTipBadge.textContent = badge;
+        tutTipTitle.textContent = title;
+        tutTipBody.innerHTML = htmlBody;
+        btnTutTipNext.textContent = btnText;
+        tutState.onTipConfirm = onNext;
+        modalTutTip.classList.remove('hidden');
+      }
+
+      function endTutorialToStageOne() {
+        tutState.active = false;
+        tutState.phase = 0;
+        tutState.onTipConfirm = null;
+        clearTutHighlights();
+        tutBanner.classList.remove('active');
+        handleResize();
+        modalTutTip.classList.add('hidden');
+        modalTutChoice.classList.add('hidden');
+        exitDeployMode();
+        initStage(1, true, true);
+      }
+
+      function spawnTutorialTrain(typeList, startS, spacingMult) {
+        clearDynamicEntities();
+        const mult = spacingMult || 1.0;
+        for (let i = 0; i < typeList.length; i++) {
+          const tId = typeList[i];
+          const s = startS + i * BUBBLE_SPACING * mult;
+          const entity = createPathogenEntity(tId);
+          const pt = sampleTrack(s);
+          entity.setPosition(pt.x, pt.y, 0);
+          state.train.push({
+            type: tId,
+            s,
+            entity,
+            wobblePhase: Math.random() * Math.PI * 2,
+            scaleAnim: 1.0
+          });
+        }
+        state.train.sort((a, b) => a.s - b.s);
+      }
+
+      function startTutorialPhase1() {
+        tutState.active = true;
+        tutState.phase = 1;
+        tutState.stepIdx = 0;
+        tutState.waitingPhase1Lockout = false;
+        state.stage = 0;
+        state.score = 0;
+        state.chainCount = 0;
+        state.chainBonusTotal = 0;
+        state.gold = 50;
+        state.clearedCount = 0;
+        state.quota = 7;
+        state.amrValue = 0;
+        state.amrDecayTimer = 0;
+        state.amrLockoutTimer = 0;
+        state.stopSpawning = true;
+        state.spawnQueue = [];
+        state.unlockedWeapons = [0, 1, 2, 3, 4, 5, 6];
+        state.unlockedDefenders = ['handwash', 'bundle', 'isolation'];
+        state.selectedWeapon = 1; // start on another weapon so player practices clicking Tamiflu
+
+        // Place all 7 static pathogens in a single neat horizontal row for easy aiming practice
+        clearDynamicEntities();
+        const rowTypes = [0, 2, 1, 3, 4, 5, 6];
+        const rowSpacingX = 1.38;
+        const startX = -((rowTypes.length - 1) * rowSpacingX) / 2;
+        const rowY = 2.45;
+        for (let i = 0; i < rowTypes.length; i++) {
+          const tId = rowTypes[i];
+          const px = startX + i * rowSpacingX;
+          const entity = createPathogenEntity(tId);
+          entity.setPosition(px, rowY, 0);
+          state.train.push({
+            type: tId,
+            s: i * BUBBLE_SPACING * 2,
+            fixedPos: { x: px, y: rowY },
+            entity,
+            wobblePhase: Math.random() * Math.PI * 2,
+            scaleAnim: 1.0
+          });
+        }
+        rebuildWeaponDock();
+        updateHUD();
+        updateAmrUI();
+
+        state.mode = 'playing';
+        SoundFX.startBgm('battle');
+        SoundFX.setBgmDuck(false);
+        tutBanner.classList.add('active');
+        handleResize();
+        refreshTutorialPrompt();
+      }
+
+      function startTutorialPhase2(sceneNum) {
+        const sc = sceneNum || 1;
+        tutState.phase = 2;
+        tutState.phase2Scene = sc;
+        tutState.phase2Sub = 'clickCoin';
+        tutState.isoOverflowDone = false;
+        tutState.isoPostTimer = 0;
+        state.amrValue = 0;
+        state.amrDecayTimer = 0;
+        state.amrLockoutTimer = 0;
+        state.gold = 60;
+        state.stopSpawning = true;
+        state.spawnQueue = [];
+
+        if (sc === 1) {
+          // Scene 1: 洗手 (9s demo)
+          tutState.targetSlotId = 1; // 上方中央 (right next to bacteria)
+          tutState.demoTimer = 9.0;
+          state.baseSpeed = 0.85;
+          state.unlockedDefenders = ['handwash'];
+          spawnTutorialTrain([2, 1, 3, 2, 1, 3, 2, 1, 3, 2, 1, 3], 1.8, 1.05);
+          tutBannerText.textContent = '防禦教學 1/3（洗手）：點擊上方發亮的「🪙」按鈕，準備在細菌旁的圓圈設置「洗手」！';
+        } else if (sc === 2) {
+          // Scene 2: 組合式照護 (14s demo, lone high-AMR bacteria mixed among paired common bacteria)
+          tutState.targetSlotId = 1; // 上方中央
+          tutState.demoTimer = 14.0;
+          state.baseSpeed = 0.65;
+          state.unlockedDefenders = ['bundle'];
+          spawnTutorialTrain([2, 2, 1, 1, 6, 2, 2, 5, 1, 1, 4, 3, 3, 2], 1.2, 1.04);
+          tutBannerText.textContent = '防禦教學 2/3（組合式照護）：點擊上方發亮的「🪙」，準備在細菌旁的圓圈設置「組合式照護」！';
+        } else {
+          // Scene 3: 接觸隔離 (5 separated CREs marching toward next circle Slot 2 -> catches 3, on 4th releases 2 to merge into 3!)
+          tutState.targetSlotId = 2; // 左上轉彎內側 (the next circle the 5 CREs will pass!)
+          tutState.demoTimer = 20.0;
+          state.baseSpeed = 1.65;
+          state.unlockedDefenders = ['isolation'];
+          spawnTutorialTrain([1, 6, 2, 6, 1, 6, 2, 6, 1, 6, 2], 0.5, 1.05);
+          tutBannerText.textContent = '防禦教學 3/3（接觸隔離）：點擊上方發亮的「🪙」，準備在下一個路過的圓圈設置「接觸隔離」！';
+        }
+
+        updateHUD();
+        updateAmrUI();
+
+        clearTutHighlights();
+        btnDeployMode.classList.add('tut-highlight');
+        tutBanner.classList.add('active');
+        handleResize();
+        state.mode = 'playing';
+      }
+
+      function startTutorialPhase3() {
+        tutState.phase = 3;
+        tutState.phase3Sub = 'clearVirus';
+        state.amrValue = 0;
+        state.amrDecayTimer = 0;
+        state.amrLockoutTimer = 0;
+        state.baseSpeed = 0.42; // Slow advance for combo practice
+        state.stopSpawning = true;
+        state.spawnQueue = [];
+        state.selectedWeapon = 1;
+
+        // 5 CREs with 4 Influenza viruses strictly alternating between every CRE: CRE-Virus-CRE-Virus-CRE-Virus-CRE-Virus-CRE
+        spawnTutorialTrain([6, 0, 6, 0, 6, 0, 6, 0, 6], 3.2, 1.0);
+        rebuildWeaponDock();
+        updateHUD();
+        updateAmrUI();
+
+        state.mode = 'playing';
+        tutBanner.classList.add('active');
+        handleResize();
+        refreshTutorialPrompt();
+      }
+
+      function refreshTutorialPrompt() {
+        if (!tutState.active) return;
+        clearTutHighlights();
+
+        if (tutState.phase === 1) {
+          const step = TUT_PHASE1_STEPS[tutState.stepIdx];
+          if (!step) return;
+          tutBannerText.textContent = step.label;
+          highlightTutWeapon(step.weapon);
+        } else if (tutState.phase === 3) {
+          if (tutState.phase3Sub === 'clearVirus') {
+            tutBannerText.textContent = '連鎖教學 1/2：先選擇發亮的「Tamiflu」，將夾在 CRE 中間的「流感病毒」一一消滅！';
+            highlightTutWeapon(0);
+          } else {
+            tutBannerText.textContent = '連鎖教學 2/2：CRE 已全部排在一起！選擇發亮的「Zavicefta」，一次消滅整排 CRE 獲得連鎖分數！';
+            highlightTutWeapon(6);
+          }
+        }
+      }
+
+      function showPhase1CompleteModal() {
+        tutState.waitingPhase1Lockout = false;
+        showTutTipModal(
+          '抗藥性管理提醒',
+          '⚠️ 抗藥性壓力管理',
+          '<p style="margin:0 0 8px;font-weight:900;color:#ffd166;font-size:14px;">注意使用太多抗生素會引發抗藥性上升，小心不要讓量表超標</p>' +
+          '<p style="margin:0;">在正式關卡中，抗藥量表會每秒自然下降 1；一旦超過 20，所有抗生素會暫停使用 <strong>10 秒</strong>（期間僅可使用 Tamiflu 與防禦角色），因此別忘了搭配防禦角色並善用連鎖來節省用藥！</p>',
+          '下一步：學習設置防禦角色',
+          () => startTutorialPhase2()
+        );
+      }
+
+      function onTutorialPathogenKilled() {
+        if (!tutState.active) return;
+
+        if (tutState.phase === 1) {
+          const prevIdx = tutState.stepIdx;
+          while (tutState.stepIdx < TUT_PHASE1_STEPS.length) {
+            const step = TUT_PHASE1_STEPS[tutState.stepIdx];
+            const stillExists = state.train.some((b) => b.type === step.type);
+            if (!stillExists) {
+              tutState.stepIdx++;
+            } else {
+              break;
+            }
+          }
+          if (tutState.stepIdx !== prevIdx) {
+            if (tutState.stepIdx >= TUT_PHASE1_STEPS.length) {
+              clearTutHighlights();
+              if (state.amrLockoutTimer > 0) {
+                tutState.waitingPhase1Lockout = true;
+                tutBannerText.textContent = '抗生素使用過量，產生抗藥性，暫停使用 10 秒！請等待恢復後進入下一階段…';
+              } else {
+                showPhase1CompleteModal();
+              }
+            } else {
+              refreshTutorialPrompt();
+            }
+          }
+        } else if (tutState.phase === 3) {
+          const virusLeft = state.train.some((b) => b.type === 0);
+          const creLeft = state.train.some((b) => b.type === 6);
+          if (tutState.phase3Sub === 'clearVirus' && !virusLeft) {
+            tutState.phase3Sub = 'clearCre';
+            refreshTutorialPrompt();
+          } else if (tutState.phase3Sub === 'clearCre' && !creLeft) {
+            clearTutHighlights();
+            SoundFX.playStageClear();
+            showTutTipModal(
+              'TUTORIAL COMPLETE',
+              '🎉 教學模式完成！',
+              '<p style="margin:0 0 8px;">太棒了！你已一次消滅整排 CRE 並獲得<strong>連鎖分數（目前連鎖分：' + state.chainBonusTotal + ' 分）</strong>！</p>' +
+              '<p style="margin:0;">現在你已完全掌握 7 種病原體用藥、抗藥壓力控管、防禦角色配置與連鎖技巧，準備好進入第 1 關正式作戰吧！</p>',
+              '進入第 1 關正式作戰',
+              () => endTutorialToStageOne()
+            );
+          }
+        }
+      }
+
       function beginPreparedStage() {
         SoundFX.ensure();
         modalStart.classList.add('hidden');
         modalPause.classList.add('hidden');
         modalDefender.classList.add('hidden');
+        btnDeployMode.classList.remove('active');
+        deployModeBanner.classList.remove('active');
+        handleResize();
         modalEnd.classList.add('hidden');
         state.mode = 'playing';
         SoundFX.startBgm('battle');
@@ -4868,6 +5522,9 @@
         SoundFX.ensure();
         modalPause.classList.add('hidden');
         modalDefender.classList.add('hidden');
+        btnDeployMode.classList.remove('active');
+        deployModeBanner.classList.remove('active');
+        handleResize();
         modalEnd.classList.add('hidden');
         initStage(1, true, true);
       }
@@ -4908,14 +5565,47 @@
         SoundFX.ensure();
         finishIntro();
       });
+      document.getElementById('btn-enter-tutorial').addEventListener('click', () => {
+        SoundFX.ensure();
+        modalTutChoice.classList.add('hidden');
+        startTutorialPhase1();
+      });
+      document.getElementById('btn-skip-tutorial').addEventListener('click', () => {
+        SoundFX.ensure();
+        modalTutChoice.classList.add('hidden');
+        initStage(1, true, true);
+      });
+      btnOpenTutFromStart.addEventListener('click', () => {
+        SoundFX.ensure();
+        modalStart.classList.add('hidden');
+        startTutorialPhase1();
+      });
+      document.getElementById('btn-tut-abort').addEventListener('click', () => {
+        SoundFX.ensure();
+        endTutorialToStageOne();
+      });
+      btnTutTipNext.addEventListener('click', () => {
+        SoundFX.ensure();
+        modalTutTip.classList.add('hidden');
+        const cb = tutState.onTipConfirm;
+        tutState.onTipConfirm = null;
+        if (cb) cb();
+      });
       btnReplayIntro.addEventListener('click', () => {
         SoundFX.ensure();
         startIntro();
       });
       document.getElementById('btn-pause').addEventListener('click', () => {
+        if (state.mode === 'deploy' || state.mode === 'picking') exitDeployMode();
         if (state.mode === 'playing') pauseGame();
         else if (state.mode === 'paused') resumeGame();
       });
+      btnDeployMode.addEventListener('click', () => {
+        SoundFX.ensure();
+        if (state.mode === 'playing') enterDeployMode();
+        else if (state.mode === 'deploy' || state.mode === 'picking') exitDeployMode();
+      });
+      document.getElementById('btn-exit-deploy').addEventListener('click', exitDeployMode);
       document.getElementById('btn-resume').addEventListener('click', resumeGame);
       document.getElementById('btn-restart-pause').addEventListener('click', restartFromStageOne);
 
@@ -4975,11 +5665,28 @@
         startPortal.rotate(0, 0, safeDt * 65);
         endPortal.rotate(0, 0, -safeDt * 90);
         turretRing.rotate(0, 0, safeDt * 24);
+        const inDeploy = (state.mode === 'deploy' || state.mode === 'picking');
         for (let i = 0; i < defenseSlots.length; i++) {
           const sl = defenseSlots[i];
-          sl.ringEntity.rotate(0, 0, safeDt * 18);
-          const sp = 0.96 + 0.05 * Math.sin(state.elapsed * 2.4 + sl.phase);
+          sl.ringEntity.rotate(0, 0, safeDt * (inDeploy ? 68 : 18));
+          const sp = inDeploy
+            ? (1.1 + 0.1 * Math.sin(state.elapsed * 6.0 + sl.phase))
+            : (0.96 + 0.05 * Math.sin(state.elapsed * 2.4 + sl.phase));
           sl.ringEntity.setLocalScale(sp, sp, 1);
+        }
+
+        // Show golden beacon ring on recommended defense circle during Tutorial Phase 2 deploy step
+        if (tutState.active && tutState.phase === 2 && (tutState.phase2Sub === 'placeDefender' || tutState.phase2Sub === 'clickCoin')) {
+          const tSlot = defenseSlots[tutState.targetSlotId];
+          if (tSlot && !tSlot.occupant) {
+            tutTargetRing.enabled = true;
+            tutTargetRing.setPosition(tSlot.x, tSlot.y, 0.36);
+            tutTargetRing.rotate(0, 0, safeDt * 115);
+            const tp = 1.05 + 0.14 * Math.sin(state.elapsed * 8.0);
+            tutTargetRing.setLocalScale(tp, tp, 1);
+          } else {
+            tutTargetRing.enabled = false;
+          }
         }
         for (let i = 0; i < bgStars.length; i++) {
           const st = bgStars[i];
@@ -5033,7 +5740,7 @@
 
             let hitFound = false;
             for (let j = 0; j < state.train.length; j++) {
-              const bpt = sampleTrack(state.train[j].s);
+              const bpt = getTrainItemPos(state.train[j]);
               if (Math.hypot(rx - bpt.x, ry - bpt.y) < BUBBLE_RADIUS * 1.85) {
                 hitPt = bpt;
                 hitFound = true;
@@ -5106,12 +5813,17 @@
           state.amrLockoutTimer = Math.max(0, state.amrLockoutTimer - safeDt);
           amrChanged = true;
           if (state.amrLockoutTimer === 0) {
-            state.amrValue = Math.min(state.amrValue, 10);
+            state.amrValue = tutState.active ? 0 : Math.min(state.amrValue, 10);
             SoundFX.startBgm('battle');
             spawnFloatingText(SHOOTER_POS.x, SHOOTER_POS.y + 1.4, '抗生素已恢復使用！', '#4ef2a8', 17);
+            if (tutState.active && tutState.phase === 1 && tutState.waitingPhase1Lockout) {
+              updateAmrUI();
+              showPhase1CompleteModal();
+              return;
+            }
           }
         }
-        if (state.amrValue > 0) {
+        if (state.amrValue > 0 && !tutState.active) {
           state.amrDecayTimer += safeDt;
           while (state.amrDecayTimer >= 1.0 && state.amrValue > 0) {
             state.amrDecayTimer -= 1.0;
@@ -5155,22 +5867,33 @@
               state.train[i].s = Math.max(i * BUBBLE_SPACING, state.train[i].s - backDelta);
             }
           } else {
-            state.train[0].s += state.baseSpeed * safeDt;
-            for (let i = 1; i < state.train.length; i++) {
-              const prev = state.train[i - 1];
-              const cur = state.train[i];
-              const gap = cur.s - prev.s;
-              if (gap < BUBBLE_SPACING) {
-                cur.s = prev.s + BUBBLE_SPACING;
-              } else if (gap > BUBBLE_SPACING + 0.04 && prev.type === cur.type) {
-                const pull = Math.min(gap - BUBBLE_SPACING, 4.2 * safeDt);
-                let segEnd = i;
-                while (segEnd < state.train.length - 1 &&
-                       (state.train[segEnd + 1].s - state.train[segEnd].s) <= BUBBLE_SPACING + 0.06) {
-                  segEnd++;
-                }
-                for (let k = i; k <= segEnd; k++) {
-                  state.train[k].s -= pull;
+            const isTutFrozen = tutState.active && (
+              tutState.phase === 1 ||
+              (tutState.phase === 2 && tutState.phase2Sub !== 'runningDemo')
+            );
+            if (!isTutFrozen) {
+              const maxLeadS = tutState.active ? TRACK.totalLength * 0.72 : TRACK.totalLength;
+              const curLeadS = state.train[state.train.length - 1].s;
+              if (curLeadS < maxLeadS) {
+                state.train[0].s += state.baseSpeed * safeDt;
+              }
+              for (let i = 1; i < state.train.length; i++) {
+                const prev = state.train[i - 1];
+                const cur = state.train[i];
+                const gap = cur.s - prev.s;
+                if (gap < BUBBLE_SPACING) {
+                  cur.s = prev.s + BUBBLE_SPACING;
+                } else if (gap > BUBBLE_SPACING + 0.04 && prev.type === cur.type) {
+                  const pullSpeed = tutState.active ? 8.5 : 4.2;
+                  const pull = Math.min(gap - BUBBLE_SPACING, pullSpeed * safeDt);
+                  let segEnd = i;
+                  while (segEnd < state.train.length - 1 &&
+                         (state.train[segEnd + 1].s - state.train[segEnd].s) <= BUBBLE_SPACING + 0.06) {
+                    segEnd++;
+                  }
+                  for (let k = i; k <= segEnd; k++) {
+                    state.train[k].s -= pull;
+                  }
                 }
               }
             }
@@ -5179,7 +5902,7 @@
           // Update 3D pathogen transforms & animations
           for (let i = 0; i < state.train.length; i++) {
             const b = state.train[i];
-            const pt = sampleTrack(b.s);
+            const pt = getTrainItemPos(b);
             b.entity.setPosition(pt.x, pt.y, 0);
             if (b.scaleAnim !== 1.0) {
               b.scaleAnim += (1.0 - b.scaleAnim) * Math.min(1, safeDt * 12);
@@ -5210,12 +5933,12 @@
 
           const leadS = state.train[state.train.length - 1].s;
           const dangerRatio = leadS / TRACK.totalLength;
-          dangerBannerEl.classList.toggle('active', dangerRatio > 0.78);
-          if (leadS >= TRACK.totalLength - 0.15) {
+          dangerBannerEl.classList.toggle('active', !tutState.active && dangerRatio > 0.78);
+          if (!tutState.active && leadS >= TRACK.totalLength - 0.15) {
             showEndModal(false);
             return;
           }
-        } else if (state.stopSpawning) {
+        } else if (state.stopSpawning && !tutState.active) {
           let hasHeld = false;
           for (let i = 0; i < defenseSlots.length; i++) {
             const occ = defenseSlots[i].occupant;
@@ -5228,6 +5951,81 @@
             showEndModal(true);
             return;
           }
+        }
+
+        // --- Tutorial 3D Target Highlight Ring & Phase 2 5-Second Live Demo Timer ---
+        if (tutState.active) {
+          let highlightTarget = null;
+          if (tutState.phase === 1) {
+            const step = TUT_PHASE1_STEPS[tutState.stepIdx];
+            if (step) highlightTarget = state.train.find((b) => b.type === step.type) || null;
+          } else if (tutState.phase === 3) {
+            const targetType = tutState.phase3Sub === 'clearVirus' ? 0 : 6;
+            highlightTarget = state.train.find((b) => b.type === targetType) || null;
+          }
+
+          if (tutState.phase !== 2) {
+            if (highlightTarget) {
+              const hpt = getTrainItemPos(highlightTarget);
+              tutTargetRing.enabled = true;
+              tutTargetRing.setPosition(hpt.x, hpt.y, 0.36);
+              tutTargetRing.rotate(0, 0, safeDt * 110);
+              const tp = 1.0 + 0.14 * Math.sin(state.elapsed * 8.0);
+              tutTargetRing.setLocalScale(tp, tp, 1);
+            } else {
+              tutTargetRing.enabled = false;
+            }
+          }
+
+          if (tutState.phase === 2 && tutState.phase2Sub === 'runningDemo') {
+            const sc = tutState.phase2Scene;
+            tutState.demoTimer -= safeDt;
+            if (sc === 1) {
+              tutBannerText.textContent = '洗手運作中（剩餘 ' + Math.max(0, tutState.demoTimer).toFixed(1) + ' 秒）：紅衣消防員每 4 秒會隨機消滅 1 隻細菌！';
+              if (tutState.demoTimer <= 0) {
+                showTutTipModal(
+                  '洗手演練完成',
+                  '✅ 洗手可以穩定減菌！',
+                  '<p style="margin:0;">你剛剛看到「洗手」消防員每隔 4 秒就噴出水柱隨機消滅細菌，且完全不會增加抗藥性壓力！<br/>接著來學習第二種防禦角色：<strong>組合式照護</strong>。</p>',
+                  '下一步：組合式照護教學',
+                  () => startTutorialPhase2(2)
+                );
+                return;
+              }
+            } else if (sc === 2) {
+              tutBannerText.textContent = '組合式照護運作中（剩餘 ' + Math.max(0, tutState.demoTimer).toFixed(1) + ' 秒）：每 6 秒優先消滅單獨落單且高抗藥性的細菌！';
+              if (tutState.demoTimer <= 0) {
+                showTutTipModal(
+                  '組合式照護演練完成',
+                  '✅ 精準點殺落單高抗藥菌！',
+                  '<p style="margin:0;">「組合式照護」魔法師每 6 秒就會自動優先點殺單獨落單的高抗藥性細菌（CRE→ESBL→MRSA…），幫你省下珍貴的後線抗生素！<br/>最後來學習第三種防禦角色：<strong>接觸隔離</strong>。</p>',
+                  '下一步：接觸隔離教學',
+                  () => startTutorialPhase2(3)
+                );
+                return;
+              }
+            } else {
+              if (tutState.isoOverflowDone) {
+                tutState.isoPostTimer -= safeDt;
+              } else {
+                tutBannerText.textContent = '接觸隔離運作中…觀察指揮家抓住 3 隻 CRE，並在遇到第 4 隻時放出 2 隻合流成 3 隻！';
+              }
+              if ((tutState.isoOverflowDone && tutState.isoPostTimer <= 0) || tutState.demoTimer <= 0) {
+                showTutTipModal(
+                  '接觸隔離的作用',
+                  '🎼 接觸隔離：阻擋並集中 CRE！',
+                  '<p style="margin:0 0 8px;"><strong>接觸隔離（指揮家）的作用：</strong></p>' +
+                  '<p style="margin:0 0 8px;">1. 會自動攔截路過的 CRE（最多同時抓住 3 隻），並且<strong>每 30 秒消化 1 隻 CRE（產生 1 金）</strong>。<br/>2. 當抓住 3 隻後再遇第 4 隻 CRE 路過時，會放出 2 隻與新 CRE 合併成 <strong>3 隻排在一起</strong>（同時保留 1 隻繼續消化），方便你用 1 發 Zavicefta 一次連消！</p>' +
+                  '<p style="margin:0;color:#ffd166;">接下來進入最後一關教學：用 Tamiflu 清掉夾在 5 隻 CRE 中間的 4 隻病毒，再用 Zavicefta 一次連消取得連鎖分數！</p>',
+                  '開始連鎖練習',
+                  () => startTutorialPhase3()
+                );
+                return;
+              }
+            }
+          }
+        } else {
+          tutTargetRing.enabled = false;
         }
 
         // --- Update Deployed Defenders (Handwash / Isolation / Care Bundle) ---
@@ -5262,7 +6060,7 @@
             if (occ.cooldown <= 0) {
               const candidates = [];
               for (let j = 0; j < state.train.length; j++) {
-                const pt = sampleTrack(state.train[j].s);
+                const pt = getTrainItemPos(state.train[j]);
                 if (Math.hypot(pt.x - sl.x, pt.y - sl.y) <= DEFENDER_RANGE) {
                   candidates.push(state.train[j]);
                 }
@@ -5276,19 +6074,69 @@
               }
             }
           } else if (occ.kind === 'isolation') {
-            if (occ.isolatedCres.length < 3) {
-              for (let j = state.train.length - 1; j >= 0; j--) {
-                const item = state.train[j];
-                if (item.type !== 6) continue;
-                if (item._releasedBy && item._releasedBy[sl.id]) continue;
-                const pt = sampleTrack(item.s);
-                if (Math.hypot(pt.x - sl.x, pt.y - sl.y) <= ISOLATION_CAPTURE_RANGE) {
-                  aimDefenderToward(sl, pt.x, pt.y);
+            // 1. Digest 1 held CRE every 60 seconds -> +1 gold & +1 score
+            if (occ.isolatedCres.length > 0) {
+              occ.digestTimer = (occ.digestTimer || 0) + safeDt;
+              if (occ.digestTimer >= 30.0) {
+                occ.digestTimer -= 30.0;
+                const digested = occ.isolatedCres.shift();
+                if (digested) {
+                  spawnParticles(sl.x, sl.y, goldTrimMat, 10);
+                  digested.entity.destroy();
+                  state.score += 1;
+                  state.gold += 1;
+                  state.clearedCount += 1;
+                  saveBestScore();
+                  updateHUD();
+                  SoundFX.playPop(2);
+                  spawnFloatingText(sl.x, sl.y + 0.6, '接觸隔離消化 CRE! +1分 +1金', '#9ad8ff', 17);
+                }
+              }
+            } else {
+              occ.digestTimer = 0;
+            }
+
+            // 2. Check passing CREs in range
+            for (let j = state.train.length - 1; j >= 0; j--) {
+              const item = state.train[j];
+              if (item.type !== 6) continue;
+              if (item._releasedBy && item._releasedBy[sl.id]) continue;
+              const pt = sampleTrack(item.s);
+              if (Math.hypot(pt.x - sl.x, pt.y - sl.y) <= ISOLATION_CAPTURE_RANGE) {
+                aimDefenderToward(sl, pt.x, pt.y);
+                if (occ.isolatedCres.length < 3) {
                   state.train.splice(j, 1);
                   occ.isolatedCres.push(item);
                   SoundFX.playIsolate();
                   spawnFloatingText(sl.x, sl.y + 0.55, '隔離 CRE (' + occ.isolatedCres.length + '/3)', '#9ad8ff', 16);
-                  if (occ.isolatedCres.length >= 3) break;
+                } else {
+                  // Already holding 3 CREs & a new CRE passes by -> release 2 held CREs right beside this new CRE (forming 3 together!), keep 1 to digest!
+                  item._releasedBy = item._releasedBy || {};
+                  item._releasedBy[sl.id] = true;
+                  const toRelease = occ.isolatedCres.splice(0, 2); // keeps 1 CRE in occ.isolatedCres
+                  const anchorS = item.s;
+                  for (let r = 0; r < toRelease.length; r++) {
+                    const rel = toRelease[r];
+                    rel.s = anchorS + (r + 1) * BUBBLE_SPACING;
+                    rel.scaleAnim = 1.24;
+                    rel._releasedBy = rel._releasedBy || {};
+                    rel._releasedBy[sl.id] = true;
+                    const rpt = sampleTrack(rel.s);
+                    rel.entity.setPosition(rpt.x, rpt.y, 0);
+                    state.train.splice(j + 1 + r, 0, rel);
+                  }
+                  for (let k = j + 3; k < state.train.length; k++) {
+                    const minS = state.train[k - 1].s + BUBBLE_SPACING;
+                    if (state.train[k].s < minS) state.train[k].s = minS;
+                  }
+                  SoundFX.playIsolate();
+                  spawnFloatingText(pt.x, pt.y + 0.55, '隔離滿載！放出 2 隻合流成 3 隻 CRE!', '#ffd166', 17);
+                  if (tutState.active && tutState.phase === 2 && tutState.phase2Scene === 3 && !tutState.isoOverflowDone) {
+                    tutState.isoOverflowDone = true;
+                    tutState.isoPostTimer = 2.6;
+                    tutBannerText.textContent = '太棒了！接觸隔離已抓住 3 隻 CRE，並在遇見第 4 隻時放出 2 隻合流成 3 隻一起前進！';
+                  }
+                  break;
                 }
               }
             }
@@ -5303,12 +6151,6 @@
               const hy = sl.y + Math.sin(ang) * 0.42;
               occ.isolatedCres[k].entity.setPosition(hx, hy, 0.35);
               occ.isolatedCres[k].entity.setLocalScale(0.68, 0.68, 0.68);
-            }
-
-            if (heldCount >= 3) {
-              releaseIsolatedCres(sl, '集滿 3 顆 CRE 放出!');
-            } else if (heldCount > 0 && !hasNonCreOnTrack && state.stopSpawning) {
-              releaseIsolatedCres(sl, '無其他細菌・放出 CRE');
             }
           } else if (occ.kind === 'bundle') {
             occ.cooldown -= safeDt;
@@ -5407,7 +6249,7 @@
           let hitIdx = -1;
           let bestDist = BUBBLE_RADIUS * 1.92;
           for (let j = 0; j < state.train.length; j++) {
-            const pt = sampleTrack(state.train[j].s);
+            const pt = getTrainItemPos(state.train[j]);
             const d = Math.hypot(proj.x - pt.x, proj.y - pt.y);
             if (d < bestDist) {
               bestDist = d;
